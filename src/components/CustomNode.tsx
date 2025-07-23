@@ -36,12 +36,11 @@ const EvidencePopover = ({ evidences, onClose }: { evidences: (Evidence & { inte
 
 export default function CustomNode({ id, data, selected }: NodeProps<any>) {
   const { label, type, evidences = [], priorityScore, confidence } = data;
-  const { updateNodeData, linkEvidenceToOpportunity } = useStore();
-
   const [isEditing, setIsEditing] = useState(false);
   const [nodeLabel, setNodeLabel] = useState(label);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false); // <-- Restore state for visual feedback
+  const { updateNodeData, linkEvidenceToOpportunity, isDraggingEvidence } = useStore();
 
 
   useEffect(() => { setNodeLabel(label); }, [label]);

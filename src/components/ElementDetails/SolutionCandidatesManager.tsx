@@ -5,7 +5,14 @@ import type { Opportunity } from '@prisma/client';
 import { useStore } from '@/lib/store';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
-const SolutionCandidateCard = ({ candidate, onUpdate, onRemove, onPromote }: { candidate: any, onUpdate: (data: any) => void, onRemove: () => void, onPromote: () => void }) => {
+// Define a specific type for a Solution Candidate object
+interface SolutionCandidate {
+    id: string;
+    title: string;
+    quickAssumptions: string[];
+}
+
+const SolutionCandidateCard = ({ candidate, onUpdate, onRemove, onPromote }: { candidate: SolutionCandidate, onUpdate: (data: SolutionCandidate) => void, onRemove: () => void, onPromote: () => void }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [newAssumption, setNewAssumption] = useState('');
 
@@ -18,7 +25,7 @@ const SolutionCandidateCard = ({ candidate, onUpdate, onRemove, onPromote }: { c
     };
 
     const handleRemoveAssumption = (indexToRemove: number) => {
-        const updatedAssumptions = (candidate.quickAssumptions || []).filter((_: any, i: number) => i !== indexToRemove);
+        const updatedAssumptions = (candidate.quickAssumptions || []).filter((_: string, i: number) => i !== indexToRemove);
         onUpdate({ ...candidate, quickAssumptions: updatedAssumptions });
     };
 
@@ -47,7 +54,7 @@ const SolutionCandidateCard = ({ candidate, onUpdate, onRemove, onPromote }: { c
                     ) : (
                         <p className="text-xs text-gray-500 italic">No assumptions added yet.</p>
                     )}
-                   
+
                     <div className="flex pt-1">
                         <input
                             type="text"
@@ -68,21 +75,25 @@ const SolutionCandidateCard = ({ candidate, onUpdate, onRemove, onPromote }: { c
 export default function SolutionCandidatesManager({ opportunity }: { opportunity: Opportunity }) {
     const { updateNodeData, promoteIdeaToSolution } = useStore();
     const [newCandidateTitle, setNewCandidateTitle] = useState('');
-    const candidates = Array.isArray(opportunity?.solutionCandidates) ? opportunity.solutionCandidates : [];
+    
+    // Corrected: Cast to 'unknown' first, then to our specific type
+    const candidates: SolutionCandidate[] = Array.isArray(opportunity?.solutionCandidates)
+        ? (opportunity.solutionCandidates as unknown as SolutionCandidate[])
+        : [];
 
-    const handleUpdateCandidates = (updatedCandidates: any[]) => {
+    const handleUpdateCandidates = (updatedCandidates: SolutionCandidate[]) => {
         updateNodeData(opportunity.id, 'opportunity', { solutionCandidates: updatedCandidates });
     };
 
     const handleAddCandidate = () => {
         if (newCandidateTitle.trim()) {
-            const newCandidate = { id: `cand_${new Date().getTime()}`, title: newCandidateTitle.trim(), quickAssumptions: [] };
+            const newCandidate: SolutionCandidate = { id: `cand_${new Date().getTime()}`, title: newCandidateTitle.trim(), quickAssumptions: [] };
             handleUpdateCandidates([...candidates, newCandidate]);
             setNewCandidateTitle('');
         }
     };
 
-    const handleUpdateCandidate = (index: number, data: any) => {
+    const handleUpdateCandidate = (index: number, data: SolutionCandidate) => {
         const newCandidates = [...candidates];
         newCandidates[index] = data;
         handleUpdateCandidates(newCandidates);
@@ -92,7 +103,7 @@ export default function SolutionCandidatesManager({ opportunity }: { opportunity
         handleUpdateCandidates(candidates.filter((_, i) => i !== index));
     };
 
-    const handlePromote = async (candidate: any, index: number) => {
+    const handlePromote = async (candidate: SolutionCandidate, index: number) => {
         if (window.confirm(`Are you sure you want to add "${candidate.title}" to the canvas as a new Solution?`)) {
             await promoteIdeaToSolution(candidate.title, opportunity);
             handleRemoveCandidate(index);

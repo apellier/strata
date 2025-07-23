@@ -9,6 +9,12 @@ import OutcomeDetails from './OutcomeDetails';
 import OpportunityDetails from './OpportunityDetails';
 import SolutionDetails from './SolutionDetails';
 import ExperimentDashboard from './ExperimentDashboard';
+import type { Opportunity, Solution, Outcome } from '@prisma/client';
+
+type NodeData = (Opportunity | Solution | Outcome) & {
+    label: string;
+    type: 'opportunity' | 'solution' | 'outcome';
+};
 
 export default function ElementDetails({ nodeData, onFocus, isFocusMode }: { nodeData: any, onFocus: (node: any) => void, isFocusMode: boolean }) {
     const { getCanvasData, nodes } = useStore();

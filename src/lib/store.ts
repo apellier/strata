@@ -12,6 +12,8 @@ const VERTICAL_SPACING = 150;
 export interface AppState {
   nodes: Node[];
   edges: Edge[];
+  isDraggingEvidence: boolean; // <-- Add new state here
+  setIsDraggingEvidence: (isDragging: boolean) => void;
   getCanvasData: () => Promise<void>;
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
@@ -28,6 +30,8 @@ export interface AppState {
 export const useStore = create<AppState>((set, get) => ({
   nodes: [],
   edges: [],
+  isDraggingEvidence: false, // <-- Initialize the state
+  setIsDraggingEvidence: (isDragging) => set({ isDraggingEvidence: isDragging }), // <-- Implement the setter
 
   getCanvasData: async () => {
     try {

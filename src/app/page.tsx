@@ -51,7 +51,7 @@ export default function Home() {
   };
 
   const handleNewInterview = async () => {
-    // Remove .toISOString() from the end of new Date()
+    // Corrected: Pass a Date object directly
     const newInterview = await api.addInterview({ interviewee: 'New Interviewee', date: new Date() });
     await fetchData(newInterview.id);
   };
@@ -103,9 +103,9 @@ export default function Home() {
     fetchData(id);
   };
 
-  const handleAddEvidence = async (interviewId: string, type: EvidenceType, content: string, updatedNotes: string) => {
+  const handleAddEvidence = async (interviewId: string, type: EvidenceType, content: string, updatedNotes: any) => {
     await api.addEvidence({ interviewId, type, content });
-    await api.updateInterview(interviewId, { notes: { content: updatedNotes } });
+    await api.updateInterview(interviewId, { notes: updatedNotes });
     fetchData(interviewId);
   };
 
@@ -137,7 +137,7 @@ export default function Home() {
       <main className="flex-grow flex relative overflow-hidden">
         <div className={`transition-all duration-300 ease-in-out bg-[var(--background)] border-r border-[var(--border)] ${isHubOpen ? 'w-1/3 min-w-[400px]' : 'w-0'}`}>
             <div className={`h-full overflow-hidden ${isHubOpen ? 'opacity-100' : 'opacity-0'}`}>
-                <InterviewManager 
+                <InterviewManager
                     interviews={interviews}
                     onFocusInterview={handleFocusInterview}
                     onNewInterview={handleNewInterview}
@@ -145,27 +145,28 @@ export default function Home() {
                 />
             </div>
         </div>
-        <div className="flex-1 h-full">
-            {viewMode === 'canvas' 
-              ? <DiscoveryCanvas 
-                  focusedNodeId={focusedNodeId} 
+        <div className="flex-1 h-full flex">
+            {viewMode === 'canvas'
+              ? <DiscoveryCanvas
+                  focusedNodeId={focusedNodeId}
                   onFocusOpportunity={setFocusedOpportunity}
                   onFocusSolution={setFocusedSolution}
                   onFocusOutcome={setFocusedOutcome}
                   panelState={panelState}
                   setPanelState={setPanelState}
-                /> 
+                />
               : <OpportunityListView onFocusNode={handleFocusNode} />
             }
         </div>
       </main>
       {editingInterview && (
-          <InterviewEditor 
+          <InterviewEditor
             interview={editingInterview}
             onClose={handleCloseEditor}
             onUpdate={handleUpdateInterview}
-            onAddEvidence={(type, content, notes) => handleAddEvidence(editingInterview.id, type, content, notes)}
-            onDeleteEvidence={(id) => handleDeleteEvidence(editingInterview.id, id)}
+            // Corrected: Explicitly type the parameters
+            onAddEvidence={(type: EvidenceType, content: string, notes: any) => handleAddEvidence(editingInterview.id, type, content, notes)}
+            onDeleteEvidence={(id: string) => handleDeleteEvidence(editingInterview.id, id)}
           />
       )}
       {focusedOpportunity && ( <OpportunityEditor opportunity={focusedOpportunity} onClose={handleCloseOpportunityEditor} /> )}

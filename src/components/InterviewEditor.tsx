@@ -25,16 +25,16 @@ const ContextualMenu = ({ top, left, onSelect }: { top: number, left: number, on
 };
 
 // The main workspace for editing notes and viewing evidence
-const InterviewWorkspace = ({ 
-    interview, 
-    onUpdate, 
-    onAddEvidence, 
-    onDeleteEvidence 
-}: { 
-    interview: Interview & { evidences: Evidence[] }, 
-    onUpdate: (id: string, data: Partial<Interview>) => void, 
-    onAddEvidence: (type: EvidenceType, content: string, updatedNotes: string) => void, 
-    onDeleteEvidence: (id: string) => void 
+const InterviewWorkspace = ({
+    interview,
+    onUpdate,
+    onAddEvidence,
+    onDeleteEvidence
+}: {
+    interview: Interview & { evidences: Evidence[] },
+    onUpdate: (id: string, data: Partial<Interview>) => void,
+    onAddEvidence: (type: EvidenceType, content: string, updatedNotes: string) => void,
+    onDeleteEvidence: (id: string) => void
 }) => {
     const [interviewee, setInterviewee] = useState(interview.interviewee);
     const [menu, setMenu] = useState<{ top: number, left: number, content: string, range: Range } | null>(null);
@@ -43,12 +43,12 @@ const InterviewWorkspace = ({
     useEffect(() => {
         setInterviewee(interview.interviewee);
     }, [interview.interviewee]);
-    
+
     // Set the initial content of the editor when the interview changes
     useEffect(() => {
         if (editorRef.current) {
             // The notes are stored as a JSON object, so we access the 'content' property
-            editorRef.current.innerHTML = (interview.notes as any)?.content || '';
+            editorRef.current.innerHTML = (interview.notes as { content: string })?.content || '';
         }
     }, [interview.id, interview.notes]);
 
@@ -66,7 +66,7 @@ const InterviewWorkspace = ({
             debouncedUpdate(interview.id, { notes: { content: editorRef.current.innerHTML } });
         }
     };
-    
+
     // When the user clicks away, save immediately
     const handleNotesBlur = () => {
         if (editorRef.current) {
@@ -105,10 +105,10 @@ const InterviewWorkspace = ({
                 VERBATIM: 'bg-blue-200/70',
                 INSIGHT: 'bg-purple-200/70',
             }[type];
-            
+
             // Wrap the selected text in the new <mark> tag
             menu.range.surroundContents(newMark);
-            
+
             const newNotesContent = editorRef.current.innerHTML;
             window.getSelection()?.removeAllRanges(); // Clear the selection
             setMenu(null); // Close the menu
@@ -127,13 +127,13 @@ const InterviewWorkspace = ({
         <div className="relative grid grid-cols-3 h-full bg-white" onMouseUp={handleMouseUp}>
             {menu && <ContextualMenu top={menu.top} left={menu.left} onSelect={handleCreateEvidence} />}
             <div className="col-span-2 p-8 overflow-y-auto">
-                <input 
-                    value={interviewee} 
+                <input
+                    value={interviewee}
                     onChange={handleIntervieweeChange}
                     onBlur={() => onUpdate(interview.id, { interviewee })}
-                    className="text-3xl font-bold w-full p-1 -ml-1 mb-4 rounded hover:bg-gray-100 focus:bg-gray-100 outline-none" 
+                    className="text-3xl font-bold w-full p-1 -ml-1 mb-4 rounded hover:bg-gray-100 focus:bg-gray-100 outline-none"
                 />
-                <div 
+                <div
                     ref={editorRef}
                     contentEditable
                     suppressContentEditableWarning
@@ -158,20 +158,23 @@ const InterviewWorkspace = ({
     );
 };
 
+// Define a clear interface for the component's props
+interface InterviewEditorProps {
+    interview: Interview & { evidences: Evidence[] };
+    onClose: () => void;
+    onUpdate: (id: string, data: Partial<Interview>) => void;
+    onAddEvidence: (type: EvidenceType, content: string, updatedNotes: string) => void;
+    onDeleteEvidence: (id: string) => void;
+}
+
 // The full-screen modal component that wraps the workspace
-export default function InterviewEditor({ 
-    interview, 
-    onClose, 
-    onUpdate, 
-    onAddEvidence, 
-    onDeleteEvidence 
-}: { 
-    interview: Interview & { evidences: Evidence[] }, 
-    onClose: () => void, 
-    onUpdate: any, 
-    onAddEvidence: any, 
-    onDeleteEvidence: any 
-}) {
+export default function InterviewEditor({
+    interview,
+    onClose,
+    onUpdate,
+    onAddEvidence,
+    onDeleteEvidence
+}: InterviewEditorProps) {
     return (
         <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center animate-fade-in">
             <div className="bg-white w-full h-full md:w-[90vw] md:h-[90vh] md:rounded-lg shadow-2xl flex flex-col">
@@ -181,7 +184,7 @@ export default function InterviewEditor({
                     </button>
                 </div>
                 <div className="flex-grow overflow-hidden">
-                    <InterviewWorkspace 
+                    <InterviewWorkspace
                         key={interview.id} // Use key to force re-render when interview changes
                         interview={interview}
                         onUpdate={onUpdate}
