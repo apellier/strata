@@ -1,26 +1,80 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import 'reactflow/dist/style.css';
+
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FFFFFF;
+  --background-alt: #F7F8FA;
+  --border: #E9E9E7;
+  --border-hover: #D1D1CF;
+  --text-primary: #191919;
+  --text-secondary: #787774;
+  --text-placeholder: #A5A5A3;
+  --accent-blue: #2563EB;
+  --accent-blue-light: #EFF6FF;
+  --radius: 0.5rem;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 font-semibold border border-transparent rounded-md transition-colors duration-150 ease-in-out;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent-blue)];
+  }
+  .btn-primary { @apply bg-[var(--accent-blue)] text-white shadow-sm; }
+  .btn-primary:hover { @apply bg-blue-700; }
+  .btn-secondary { @apply bg-white text-gray-700 border-[var(--border)] shadow-sm; }
+  .btn-secondary:hover { @apply bg-gray-50; }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  input[type="text"], input[type="number"], textarea, select {
+    @apply w-full bg-transparent text-[var(--text-primary)] border-2 border-transparent p-1 rounded-md text-base;
+    @apply placeholder:text-[var(--text-placeholder)];
+  }
+  input[type="text"]:hover, input[type="number"]:hover, textarea:hover, select:hover {
+    @apply bg-[var(--background-alt)];
+  }
+  input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
+    @apply outline-none bg-white border-[var(--accent-blue)] ring-2 ring-blue-200;
+  }
+  .prose {
+    h1, h2, h3 { @apply font-bold; }
+    p { @apply my-2; }
+    mark { @apply rounded px-1; }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes fade-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+.react-flow__node:focus,
+.react-flow__node:focus-visible {
+    outline: none;
+}
+.react-flow__node.selected > .react-flow__node-selector,
+.react-flow__node.selected > div[data-testid="rf__node-selector"] {
+    display: none;
+}
+
+/* This makes the default React Flow node container invisible */
+.react-flow__node-default, .react-flow__node-group {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    width: auto; /* Allow our custom node to define the size */
+    height: auto;
 }

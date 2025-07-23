@@ -1,103 +1,175 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import DiscoveryCanvas from '@/components/DiscoveryCanvas';
+import InterviewManager from '@/components/InterviewManager';
+import InterviewEditor from '@/components/InterviewEditor';
+import OpportunityEditor from '@/components/OpportunityEditor';
+import SolutionEditor from '@/components/SolutionEditor';
+import OutcomeEditor from '@/components/OutcomeEditor';
+import OpportunityListView from '@/components/OpportunityListView';
+import { PanelLeftClose, PanelLeftOpen, LayoutGrid, Rows3 } from 'lucide-react';
+import * as api from '@/lib/api';
+import type { Interview, Evidence, Opportunity, Solution, Outcome } from '@prisma/client';
+import { PanelState } from '@/components/SidePanel';
+
+type ViewMode = 'canvas' | 'list';
+type EvidenceType = 'VERBATIM' | 'PAIN_POINT' | 'DESIRE' | 'INSIGHT';
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [isHubOpen, setIsHubOpen] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>('canvas');
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+  const [interviews, setInterviews] = useState<(Interview & { evidences: Evidence[] })[]>([]);
+  const [editingInterview, setEditingInterview] = useState<Interview & { evidences: Evidence[] } | null>(null);
+  const [focusedOpportunity, setFocusedOpportunity] = useState<Opportunity | null>(null);
+  const [focusedSolution, setFocusedSolution] = useState<Solution | null>(null);
+  const [focusedOutcome, setFocusedOutcome] = useState<Outcome | null>(null);
+  const [panelState, setPanelState] = useState<PanelState>({ isOpen: false });
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const fetchData = useCallback(async (idToFocus?: string) => {
+    try {
+        const data = await api.getInterviews();
+        setInterviews(data);
+        if (idToFocus) {
+            const interviewToEdit = data.find(i => i.id === idToFocus);
+            if (interviewToEdit) setEditingInterview(interviewToEdit);
+        }
+    } catch (error) {
+        console.error("Failed to fetch interviews:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleFocusNode = (nodeId: string) => {
+    setViewMode('canvas');
+    setFocusedNodeId(nodeId);
+    setTimeout(() => setFocusedNodeId(null), 100);
+  };
+
+  const handleNewInterview = async () => {
+    const newInterview = await api.addInterview({ interviewee: 'New Interviewee', date: new Date().toISOString() });
+    await fetchData(newInterview.id);
+  };
+
+  const handleFocusInterview = (id: string) => {
+    const interviewToEdit = interviews.find(i => i.id === id);
+    if (interviewToEdit) setEditingInterview(interviewToEdit);
+  };
+
+  const handleCloseEditor = () => setEditingInterview(null);
+  const handleCloseOpportunityEditor = () => setFocusedOpportunity(null);
+  const handleCloseSolutionEditor = () => setFocusedSolution(null);
+  const handleCloseOutcomeEditor = () => setFocusedOutcome(null);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (focusedOpportunity || focusedSolution || focusedOutcome || editingInterview) {
+          handleCloseOpportunityEditor();
+          handleCloseSolutionEditor();
+          handleCloseOutcomeEditor();
+          handleCloseEditor();
+          return;
+        }
+        if (panelState.isOpen) {
+          setPanelState({ isOpen: false });
+          return;
+        }
+        if (isHubOpen) {
+          setIsHubOpen(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isHubOpen, panelState, focusedOpportunity, focusedSolution, focusedOutcome, editingInterview]);
+
+  const handleDeleteInterview = async (id: string) => {
+    if (window.confirm("Are you sure you want to permanently delete this interview?")) {
+        await api.deleteInterview(id);
+        fetchData();
+    }
+  };
+
+  const handleUpdateInterview = async (id: string, data: Partial<Interview>) => {
+    await api.updateInterview(id, data);
+    fetchData(id);
+  };
+
+  const handleAddEvidence = async (interviewId: string, type: EvidenceType, content: string, updatedNotes: string) => {
+    await api.addEvidence({ interviewId, type, content });
+    await api.updateInterview(interviewId, { notes: { content: updatedNotes } });
+    fetchData(interviewId);
+  };
+
+  const handleDeleteEvidence = async (interviewId: string, evidenceId: string) => {
+    await api.deleteEvidence(evidenceId);
+    fetchData(interviewId);
+  };
+
+  return (
+    <div className="h-screen w-screen flex flex-col bg-[var(--background-alt)]">
+      <header className="flex-shrink-0 bg-[var(--background)] border-b border-[var(--border)] z-20">
+        <div className="p-2 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+                <button onClick={() => setIsHubOpen(!isHubOpen)} className="p-2 rounded-md hover:bg-gray-100 text-gray-500" title={isHubOpen ? "Close Research Hub" : "Open Research Hub"}>
+                    {isHubOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
+                </button>
+                <h1 className="text-lg font-semibold text-gray-800">Strata</h1>
+            </div>
+            <div className="flex items-center rounded-md border border-[var(--border)] p-0.5 bg-gray-100">
+                <button onClick={() => setViewMode('canvas')} title="Canvas View" className={`p-1.5 rounded-md ${viewMode === 'canvas' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>
+                    <LayoutGrid size={18} />
+                </button>
+                <button onClick={() => setViewMode('list')} title="List View" className={`p-1.5 rounded-md ${viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>
+                    <Rows3 size={18} />
+                </button>
+            </div>
+        </div>
+      </header>
+      <main className="flex-grow flex relative overflow-hidden">
+        <div className={`transition-all duration-300 ease-in-out bg-[var(--background)] border-r border-[var(--border)] ${isHubOpen ? 'w-1/3 min-w-[400px]' : 'w-0'}`}>
+            <div className={`h-full overflow-hidden ${isHubOpen ? 'opacity-100' : 'opacity-0'}`}>
+                <InterviewManager 
+                    interviews={interviews}
+                    onFocusInterview={handleFocusInterview}
+                    onNewInterview={handleNewInterview}
+                    onDeleteInterview={handleDeleteInterview}
+                />
+            </div>
+        </div>
+        <div className="flex-1 h-full">
+            {viewMode === 'canvas' 
+              ? <DiscoveryCanvas 
+                  focusedNodeId={focusedNodeId} 
+                  onFocusOpportunity={setFocusedOpportunity}
+                  onFocusSolution={setFocusedSolution}
+                  onFocusOutcome={setFocusedOutcome}
+                  panelState={panelState}
+                  setPanelState={setPanelState}
+                /> 
+              : <OpportunityListView onFocusNode={handleFocusNode} />
+            }
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      {editingInterview && (
+          <InterviewEditor 
+            interview={editingInterview}
+            onClose={handleCloseEditor}
+            onUpdate={handleUpdateInterview}
+            onAddEvidence={(type, content, notes) => handleAddEvidence(editingInterview.id, type, content, notes)}
+            onDeleteEvidence={(id) => handleDeleteEvidence(editingInterview.id, id)}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
+      {focusedOpportunity && ( <OpportunityEditor opportunity={focusedOpportunity} onClose={handleCloseOpportunityEditor} /> )}
+      {focusedSolution && ( <SolutionEditor solution={focusedSolution} onClose={handleCloseSolutionEditor} /> )}
+      {focusedOutcome && ( <OutcomeEditor outcome={focusedOutcome} onClose={handleCloseOutcomeEditor} /> )}
     </div>
   );
 }

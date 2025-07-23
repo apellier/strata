@@ -1,0 +1,133 @@
+// =============================================================================
+// FILE: /prisma/schema.prisma
+// =============================================================================
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Outcome {
+  id            String        @id @default(cuid())
+  name          String
+  description   Json?
+  x_position    Float         @default(0)
+  y_position    Float         @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  status        OutcomeStatus @default(ON_TRACK)
+  targetMetric  String?
+  currentValue  Float?
+  opportunities Opportunity[]
+}
+
+model Opportunity {
+  id                 String        @id @default(cuid())
+  name               String
+  description        Json?
+  x_position         Float         @default(0)
+  y_position         Float         @default(0)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  outcomeId          String?
+  parentId           String?
+  priorityScore      Float?
+  confidence         Int?
+  solutionCandidates Json?
+  outcome            Outcome?      @relation(fields: [outcomeId], references: [id], onDelete: SetNull)
+  parent             Opportunity?  @relation("OpportunityToOpportunity", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children           Opportunity[] @relation("OpportunityToOpportunity")
+  solutions          Solution[]
+  evidences          Evidence[]    @relation("EvidenceToOpportunity")
+
+  // --- This is the corrected syntax for indexes ---
+  @@index([outcomeId])
+  @@index([parentId])
+}
+
+model Solution {
+  id            String       @id @default(cuid())
+  name          String
+  description   Json?
+  x_position    Float        @default(0)
+  y_position    Float        @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  opportunityId String
+  opportunity   Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  assumptions   Assumption[]
+
+  // --- This is the corrected syntax for indexes ---
+  @@index([opportunityId])
+}
+
+model Assumption {
+  id          String         @id @default(cuid())
+  description String
+  type        AssumptionType @default(DESIRABILITY)
+  importance  Int            @default(5)
+  evidence    Int            @default(1)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  solutionId  String
+  solution    Solution       @relation(fields: [solutionId], references: [id], onDelete: Cascade)
+  experiments Experiment[]
+}
+
+model Experiment {
+  id              String     @id @default(cuid())
+  hypothesis      String
+  testMethod      String?
+  successCriteria String?
+  results         String?
+  learnings       String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  assumptionId    String
+  assumption      Assumption @relation(fields: [assumptionId], references: [id], onDelete: Cascade)
+}
+
+model Interview {
+  id          String     @id @default(cuid())
+  interviewee String
+  date        DateTime
+  notes       Json?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  evidences   Evidence[]
+}
+
+model Evidence {
+  id            String        @id @default(cuid())
+  type          EvidenceType
+  content       String
+  createdAt     DateTime      @default(now())
+  interviewId   String
+  interview     Interview     @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  opportunities Opportunity[] @relation("EvidenceToOpportunity")
+}
+
+enum OutcomeStatus {
+  ON_TRACK
+  AT_RISK
+  ACHIEVED
+  ARCHIVED
+}
+
+enum EvidenceType {
+  VERBATIM
+  PAIN_POINT
+  DESIRE
+  INSIGHT
+}
+
+enum AssumptionType {
+  DESIRABILITY
+  VIABILITY
+  FEASIBILITY
+  USABILITY
+  ETHICAL
+}
