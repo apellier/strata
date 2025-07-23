@@ -1,5 +1,6 @@
 import type { Outcome, Opportunity, Solution, Evidence, Interview, Assumption, Experiment } from '@prisma/client';
-
+type NodeType = 'outcome' | 'opportunity' | 'solution';
+type NodeData = Outcome | Opportunity | Solution;
 async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
   const defaultOptions = {
     headers: {
@@ -33,7 +34,7 @@ export const getCanvasData = async () => {
   ]);
 };
 
-export const addNode = <T>(type: 'outcome' | 'opportunity' | 'solution', data: Partial<T>) => {
+export const addNode = <T extends NodeData>(type: NodeType, data: Partial<T>): Promise<T> => {
   const path = {
     outcome: '/api/outcomes',
     opportunity: '/api/opportunities',
@@ -42,7 +43,7 @@ export const addNode = <T>(type: 'outcome' | 'opportunity' | 'solution', data: P
   return apiRequest<T>(path, { method: 'POST', body: JSON.stringify(data) });
 };
 
-export const updateNode = <T>(type: 'outcome' | 'opportunity' | 'solution', id: string, data: Partial<T>) => {
+export const updateNode = <T extends NodeData>(type: NodeType, id: string, data: Partial<T>): Promise<T> => {
   const path = {
     outcome: '/api/outcomes',
     opportunity: '/api/opportunities',
@@ -51,7 +52,7 @@ export const updateNode = <T>(type: 'outcome' | 'opportunity' | 'solution', id: 
   return apiRequest<T>(path, { method: 'PUT', body: JSON.stringify({ id, ...data }) });
 };
 
-export const deleteNode = (type: 'outcome' | 'opportunity' | 'solution', id: string) => {
+export const deleteNode = (type: NodeType, id: string) => {
   const path = {
     outcome: `/api/outcomes/${id}`,
     opportunity: `/api/opportunities/${id}`,

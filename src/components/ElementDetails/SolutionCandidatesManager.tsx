@@ -76,13 +76,13 @@ export default function SolutionCandidatesManager({ opportunity }: { opportunity
     const { updateNodeData, promoteIdeaToSolution } = useStore();
     const [newCandidateTitle, setNewCandidateTitle] = useState('');
     
-    // Corrected: Cast to 'unknown' first, then to our specific type
     const candidates: SolutionCandidate[] = Array.isArray(opportunity?.solutionCandidates)
         ? (opportunity.solutionCandidates as unknown as SolutionCandidate[])
         : [];
 
     const handleUpdateCandidates = (updatedCandidates: SolutionCandidate[]) => {
-        updateNodeData(opportunity.id, 'opportunity', { solutionCandidates: updatedCandidates });
+        // Cast the array to 'any' here to satisfy Prisma's JsonValue type
+        updateNodeData(opportunity.id, 'opportunity', { solutionCandidates: updatedCandidates as any });
     };
 
     const handleAddCandidate = () => {
