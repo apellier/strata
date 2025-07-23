@@ -51,7 +51,8 @@ export default function Home() {
   };
 
   const handleNewInterview = async () => {
-    const newInterview = await api.addInterview({ interviewee: 'New Interviewee', date: new Date().toISOString() });
+    // Remove .toISOString() from the end of new Date()
+    const newInterview = await api.addInterview({ interviewee: 'New Interviewee', date: new Date() });
     await fetchData(newInterview.id);
   };
 
