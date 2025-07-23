@@ -13,7 +13,6 @@ import ReactFlow, {
   Edge,
   NodeDragHandler,
   OnNodesDelete,
-  OnPaneClick,
   OnConnectStart,
   OnConnectEnd,
 } from 'reactflow';
@@ -131,10 +130,6 @@ const DiscoveryCanvasContent = ({
         updateNodePosition(node.id, node.data.type, node.position);
     }, [updateNodePosition]);
 
-    const onPaneClick: OnPaneClick = useCallback(() => {
-        setPanelState({ isOpen: false });
-    }, [setPanelState]);
-
     const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
         const currentNodeInStore = useStore.getState().nodes.find(n => n.id === node.id);
         if (currentNodeInStore) {
@@ -192,7 +187,6 @@ const DiscoveryCanvasContent = ({
                     onNodeClick={onNodeClick}
                     onNodeDragStop={onNodeDragStop}
                     onNodesDelete={handleNodesDelete}
-                    onPaneClick={onPaneClick}
                     nodeTypes={useMemo(() => ({ default: CustomNode }), [])}
                     fitView
                     deleteKeyCode={['Backspace', 'Delete']}

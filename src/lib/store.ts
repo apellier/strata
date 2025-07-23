@@ -4,6 +4,11 @@ import * as api from './api';
 import type { Outcome, Opportunity, Solution, Evidence } from '@prisma/client';
 import toast from 'react-hot-toast';
 
+type NodeType = 'outcome' | 'opportunity' | 'solution';
+
+// Define a union type for all possible data objects our nodes can hold
+type NodeData = Outcome | Opportunity | Solution;
+
 // Constants for a clean layout
 const NODE_WIDTH = 256;
 const HORIZONTAL_SPACING = 50;
@@ -93,6 +98,13 @@ export const useStore = create<AppState>((set, get) => ({
         edges: applyEdgeChanges([{ type: 'add', item: { id: `e-${source}-${target}`, source, target, animated: true } }], state.edges),
         nodes: state.nodes.map(n => n.id === target ? { ...n, data: { ...n.data, ...updatedNode } } : n)
     }));
+    
+    if (updatedNode) { // Check if updatedNode is not null to prevent spread error
+      set(state => ({
+          edges: applyEdgeChanges([{ type: 'add', item: { id: `e-${source}-${target}`, source, target, animated: true } }], state.edges),
+          nodes: state.nodes.map(n => n.id === target ? { ...n, data: { ...n.data, ...updatedNode } } : n)
+      }));
+  }
   },
   
   updateNodePosition: (id, type, position) => {
