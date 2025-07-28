@@ -9,17 +9,23 @@ export default function EvidenceLinker({ opportunity }: { opportunity: Opportuni
     const { updateNodeData } = useStore();
     const [allEvidence, setAllEvidence] = useState<(Evidence & { interview: Interview })[]>([]);
     const [isAdding, setIsAdding] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         api.getAllEvidence().then(setAllEvidence);
     }, []);
 
     const linkedEvidenceIds = opportunity.evidences?.map((e: Evidence) => e.id) || [];
-    const unlinkedEvidence = allEvidence.filter(e => !linkedEvidenceIds.includes(e.id));
+
+    const filteredAndUnlinkedEvidence = allEvidence.filter(e =>
+        !linkedEvidenceIds.includes(e.id) &&
+        e.content.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const handleLink = (evidenceId: string) => {
         updateNodeData(opportunity.id, 'opportunity', { evidenceIds: [...linkedEvidenceIds, evidenceId] });
         setIsAdding(false);
+        setSearchTerm('');
     };
 
     const handleUnlink = (evidenceId: string) => {
@@ -42,7 +48,7 @@ export default function EvidenceLinker({ opportunity }: { opportunity: Opportuni
 
             {isAdding && (
                 <div className="p-2 bg-gray-50 rounded-md mb-4 max-h-48 overflow-y-auto border">
-                    {unlinkedEvidence.length > 0 ? unlinkedEvidence.map(e => (
+                    {filteredAndUnlinkedEvidence.length > 0 ? filteredAndUnlinkedEvidence.map(e => (
                         <div key={e.id} onClick={() => handleLink(e.id)} className={`p-2 my-1 border-l-4 rounded-md cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${evidenceColors[e.type]}`}>
                             <p className="text-sm italic">"{e.content}"</p>
                             <p className="text-xs text-gray-500 mt-1">From: {e.interview.interviewee}</p>
