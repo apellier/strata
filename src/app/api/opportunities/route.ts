@@ -1,6 +1,8 @@
+
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { z } from 'zod';
+import { protectApiRoute } from '@/lib/auth';
 
 const createOpportunitySchema = z.object({
   name: z.string().min(1, { message: "Name cannot be empty." }),
@@ -19,13 +21,17 @@ const updateOpportunitySchema = z.object({
   evidenceIds: z.array(z.string().cuid()).optional(),
   outcomeId: z.string().cuid().optional().nullable(),
   parentId: z.string().cuid().optional().nullable(),
-  // FIX: Add position fields for saving node movements
   x_position: z.number().optional(),
   y_position: z.number().optional(),
 });
+
 export async function GET() {
+    const { user, error } = await protectApiRoute();
+    if (error) return error;
+
     try {
         const opportunities = await prisma.opportunity.findMany({
+            where: { userId: user.id },
             include: { evidences: { include: { interview: true } } }
         });
         return NextResponse.json(opportunities);
@@ -36,12 +42,16 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+    const { user, error } = await protectApiRoute();
+    if (error) return error;
+
     try {
         const body = await req.json();
         const validatedData = createOpportunitySchema.parse(body);
         const newOpportunity = await prisma.opportunity.create({
           data: {
             ...validatedData,
+            userId: user.id,
             description: { type: 'doc', content: [{ type: 'paragraph' }] },
           },
         });
@@ -56,11 +66,22 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  const { user, error } = await protectApiRoute();
+  if (error) return error;
+
   try {
     const { id, ...data } = await req.json();
     if (!id) {
         return new NextResponse(JSON.stringify({ message: 'Opportunity ID is required' }), { status: 400 });
     }
+
+    const opportunity = await prisma.opportunity.findFirst({
+      where: { id, userId: user.id }
+    });
+    if (!opportunity) {
+      return new NextResponse(JSON.stringify({ message: 'Opportunity not found or unauthorized' }), { status: 404 });
+    }
+
     const validatedData = updateOpportunitySchema.parse(data);
     if (validatedData.evidenceIds !== undefined) {
         (validatedData as any).evidences = {

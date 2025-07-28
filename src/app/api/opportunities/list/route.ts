@@ -1,9 +1,15 @@
+
 import { NextResponse as NextResponseList } from 'next/server';
 import prismaClientList from '@/lib/db';
+import { protectApiRoute } from '@/lib/auth';
 
 export async function GET() {
+  const { user, error } = await protectApiRoute();
+  if (error) return error;
+
   try {
     const opportunities = await prismaClientList.opportunity.findMany({
+      where: { userId: user.id },
       include: {
         _count: {
           select: { evidences: true },

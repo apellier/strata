@@ -1,6 +1,7 @@
 import { NextResponse as NextResponseAssumption } from 'next/server';
 import prismaAssumption from '@/lib/db';
 import { z as zAssumption } from 'zod';
+import { protectApiRoute } from '@/lib/auth';
 
 const assumptionSchema = zAssumption.object({
     description: zAssumption.string().min(1),
@@ -11,10 +12,24 @@ const assumptionSchema = zAssumption.object({
 });
 
 export async function POST(req: Request) {
+  const { user, error } = await protectApiRoute();
+  if (error) return error;
+
   try {
     const body = await req.json();
     const validatedData = assumptionSchema.pick({ description: true, solutionId: true }).parse(body);
-    const newAssumption = await prismaAssumption.assumption.create({ data: validatedData });
+
+    // Verify the user owns the solution they are adding an assumption to
+    const solution = await prismaAssumption.solution.findFirst({
+      where: { id: validatedData.solutionId, userId: user.id }
+    });
+    if (!solution) {
+      return new NextResponseAssumption(JSON.stringify({ message: 'Solution not found or unauthorized' }), { status: 404 });
+    }
+
+    const newAssumption = await prismaAssumption.assumption.create({ 
+      data: { ...validatedData, userId: user.id } 
+    });
     return NextResponseAssumption.json(newAssumption, { status: 201 });
   } catch (error) {
     if (error instanceof zAssumption.ZodError) {
@@ -26,9 +41,20 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+    const { user, error } = await protectApiRoute();
+    if (error) return error;
+
     try {
         const { id, ...data } = await req.json();
         if (!id) return new NextResponseAssumption(JSON.stringify({ message: 'Assumption ID is required' }), { status: 400 });
+
+        const assumption = await prismaAssumption.assumption.findFirst({
+          where: { id, userId: user.id }
+        });
+        if (!assumption) {
+          return new NextResponseAssumption(JSON.stringify({ message: 'Assumption not found or unauthorized' }), { status: 404 });
+        }
+
         const validatedData = assumptionSchema.partial().parse(data);
         const updatedAssumption = await prismaAssumption.assumption.update({
             where: { id },

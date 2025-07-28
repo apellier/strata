@@ -1,6 +1,7 @@
 import { NextResponse as NextResponseOutcome } from 'next/server';
 import prismaOutcome from '@/lib/db';
 import { z as zOutcome } from 'zod';
+import { protectApiRoute } from '@/lib/auth';
 
 const outcomeSchema = zOutcome.object({
   name: zOutcome.string().min(1, { message: "Name cannot be empty." }),
@@ -8,14 +9,18 @@ const outcomeSchema = zOutcome.object({
   status: zOutcome.enum(['ON_TRACK', 'AT_RISK', 'ACHIEVED', 'ARCHIVED']).optional(),
   targetMetric: zOutcome.string().optional().nullable(),
   currentValue: zOutcome.number().optional().nullable(),
-  // FIX: Add position fields for saving node movements
   x_position: zOutcome.number().optional(),
   y_position: zOutcome.number().optional(),
 });
 
 export async function GET() {
+  const { user, error } = await protectApiRoute();
+  if (error) return error;
+
   try {
-    const outcomes = await prismaOutcome.outcome.findMany();
+    const outcomes = await prismaOutcome.outcome.findMany({
+      where: { userId: user.id },
+    });
     return NextResponseOutcome.json(outcomes);
   } catch (error) {
     console.error("Error fetching outcomes:", error);
@@ -24,12 +29,16 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const { user, error } = await protectApiRoute();
+  if (error) return error;
+
   try {
     const body = await req.json();
     const validatedData = outcomeSchema.parse(body);
     const newOutcome = await prismaOutcome.outcome.create({ 
         data: {
             ...validatedData,
+            userId: user.id,
             description: { type: 'doc', content: [{ type: 'paragraph' }] },
         }
     });
@@ -44,9 +53,21 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  const { user, error } = await protectApiRoute();
+  if (error) return error;
+
   try {
     const { id, ...data } = await req.json();
     if (!id) return new NextResponseOutcome(JSON.stringify({ message: 'Outcome ID is required' }), { status: 400 });
+
+    const outcome = await prismaOutcome.outcome.findFirst({
+        where: { id, userId: user.id },
+    });
+
+    if (!outcome) {
+        return new NextResponseOutcome(JSON.stringify({ message: 'Not Found or Unauthorized' }), { status: 404 });
+    }
+
     const validatedData = outcomeSchema.partial().parse(data);
     const updatedOutcome = await prismaOutcome.outcome.update({
       where: { id },

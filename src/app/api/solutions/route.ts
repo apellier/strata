@@ -1,10 +1,9 @@
-// src/app/api/solutions/route.ts
 
 import { NextResponse as NextResponseSolution } from 'next/server';
 import prismaSolution from '@/lib/db';
 import { z as zSolution } from 'zod';
+import { protectApiRoute } from '@/lib/auth';
 
-// Base schema for creating a solution
 const createSolutionSchema = zSolution.object({
   name: zSolution.string().min(1, { message: "Name cannot be empty." }),
   opportunityId: zSolution.string().cuid(),
@@ -13,7 +12,6 @@ const createSolutionSchema = zSolution.object({
   assumptions: zSolution.array(zSolution.string()).optional(),
 });
 
-// Schema for updating a solution
 const updateSolutionSchema = zSolution.object({
   name: zSolution.string().min(1).optional(),
   description: zSolution.any().optional(),
@@ -21,10 +19,13 @@ const updateSolutionSchema = zSolution.object({
   y_position: zSolution.number().optional(),
 });
 
-
 export async function GET() {
+  const { user, error } = await protectApiRoute();
+  if (error) return error;
+
   try {
     const solutions = await prismaSolution.solution.findMany({
+      where: { userId: user.id },
       include: { assumptions: { include: { experiments: true } } }
     });
     return NextResponseSolution.json(solutions);
@@ -35,16 +36,27 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const { user, error } = await protectApiRoute();
+  if (error) return error;
+
   try {
     const body = await req.json();
-    // Use the dedicated creation schema
     const validatedData = createSolutionSchema.parse(body);
     
     const { assumptions, ...solutionData } = validatedData;
 
+    // Verify user owns the parent opportunity
+    const opportunity = await prismaSolution.opportunity.findFirst({
+        where: { id: solutionData.opportunityId, userId: user.id }
+    });
+    if (!opportunity) {
+        return new NextResponseSolution(JSON.stringify({ message: 'Opportunity not found or unauthorized' }), { status: 404 });
+    }
+
     const newSolution = await prismaSolution.solution.create({ 
         data: {
             ...solutionData,
+            userId: user.id,
             description: { type: 'doc', content: [{ type: 'paragraph' }] },
         }
     });
@@ -54,19 +66,19 @@ export async function POST(req: Request) {
             data: assumptions.map(desc => ({
                 description: desc,
                 solutionId: newSolution.id,
+                userId: user.id, // Also tag assumptions with userId
             })),
         });
     }
 
     const finalSolution = await prismaSolution.solution.findUnique({
         where: { id: newSolution.id },
-        include: { assumptions: { include: { experiments: true } } }
+        include: { assumptions: true }
     });
 
     return NextResponseSolution.json(finalSolution, { status: 201 });
   } catch (error) {
     if (error instanceof zSolution.ZodError) {
-        // Return detailed Zod errors for easier debugging
         return new NextResponseSolution(JSON.stringify({ message: 'Invalid input data', errors: error.errors }), { status: 400 });
     }
     console.error("Error creating solution:", error);
@@ -75,15 +87,24 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+    const { user, error } = await protectApiRoute();
+    if (error) return error;
+
     try {
         const { id, ...data } = await req.json();
         if (!id) return new NextResponseSolution(JSON.stringify({ message: 'Solution ID is required' }), { status: 400 });
-        // Use the dedicated update schema
+        
+        const solution = await prismaSolution.solution.findFirst({
+            where: { id, userId: user.id }
+        });
+        if (!solution) {
+            return new NextResponseSolution(JSON.stringify({ message: 'Solution not found or unauthorized' }), { status: 404 });
+        }
+
         const validatedData = updateSolutionSchema.partial().parse(data);
         const updatedSolution = await prismaSolution.solution.update({
             where: { id },
             data: validatedData,
-            include: { assumptions: { include: { experiments: true } } }
         });
         return NextResponseSolution.json(updatedSolution);
     } catch (error) {

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import DiscoveryCanvas from '@/components/DiscoveryCanvas';
 import InterviewManager from '@/components/InterviewManager';
 import InterviewEditor from '@/components/InterviewEditor';
@@ -12,6 +13,8 @@ import { PanelLeftClose, PanelLeftOpen, LayoutGrid, Rows3 } from 'lucide-react';
 import * as api from '@/lib/api';
 import type { Interview, Evidence, Opportunity, Solution, Outcome } from '@prisma/client';
 import { PanelState } from '@/components/SidePanel';
+import LandingPage from './landing-page'; // Import the new landing page
+import { SignOut } from '@/components/auth-components'; // Import the SignOut button
 
 type ViewMode = 'canvas' | 'list';
 type EvidenceType = 'VERBATIM' | 'PAIN_POINT' | 'DESIRE' | 'INSIGHT';
@@ -26,6 +29,7 @@ export default function Home() {
   const [focusedSolution, setFocusedSolution] = useState<Solution | null>(null);
   const [focusedOutcome, setFocusedOutcome] = useState<Outcome | null>(null);
   const [panelState, setPanelState] = useState<PanelState>({ isOpen: false });
+  const { data: session, status } = useSession();
 
   const fetchData = useCallback(async (idToFocus?: string) => {
     try {
@@ -118,6 +122,16 @@ export default function Home() {
     fetchData(interviewId);
   };
 
+    // Show a loading state while session is being determined
+    if (status === 'loading') {
+      return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    }
+  
+    // If there's no session, show the landing page
+    if (!session) {
+      return <LandingPage />;
+    }
+
   return (
     <div className="h-screen w-screen flex flex-col bg-[var(--background-alt)]">
       <header className="flex-shrink-0 bg-[var(--background)] border-b border-[var(--border)] z-20">
@@ -128,13 +142,16 @@ export default function Home() {
                 </button>
                 <h1 className="text-lg font-semibold text-gray-800">Strata</h1>
             </div>
-            <div className="flex items-center rounded-md border border-[var(--border)] p-0.5 bg-gray-100">
-                <button onClick={() => setViewMode('canvas')} title="Canvas View" className={`p-1.5 rounded-md ${viewMode === 'canvas' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>
-                    <LayoutGrid size={18} />
-                </button>
-                <button onClick={() => setViewMode('list')} title="List View" className={`p-1.5 rounded-md ${viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>
-                    <Rows3 size={18} />
-                </button>
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center rounded-md border border-[var(--border)] p-0.5 bg-gray-100">
+                  <button onClick={() => setViewMode('canvas')} title="Canvas View" className={`p-1.5 rounded-md ${viewMode === 'canvas' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>
+                      <LayoutGrid size={18} />
+                  </button>
+                  <button onClick={() => setViewMode('list')} title="List View" className={`p-1.5 rounded-md ${viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-500'}`}>
+                      <Rows3 size={18} />
+                  </button>
+              </div>
+              <SignOut />
             </div>
         </div>
       </header>
