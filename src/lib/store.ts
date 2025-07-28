@@ -113,9 +113,22 @@ export const useStore = create<AppState>((set, get) => ({
   },
   
   updateNodePosition: (id, type, position) => {
-    api.updateNode(type, id, { x_position: position.x, y_position: position.y }).catch(err => {
-        toast.error("Failed to save new position.");
-        console.error(err);
+    // Optimistically update the position in the local state
+    set(state => ({
+        nodes: state.nodes.map(n => n.id === id ? { ...n, position } : n)
+    }));
+
+    // Use toast.promise for better user feedback
+    const apiCall = api.updateNode(type, id, { x_position: position.x, y_position: position.y });
+    
+    toast.promise(apiCall, {
+        loading: 'Saving new position...',
+        success: 'Position saved!',
+        error: (err) => {
+            // If the API call fails, revert the change and refresh data
+            get().getCanvasData();
+            return `Failed to save position: ${err.toString()}`;
+        }
     });
   },
 

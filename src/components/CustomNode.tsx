@@ -100,14 +100,15 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
 
   const nodeStyle = typeStyles[type as keyof typeof typeStyles] || { border: 'border-t-gray-400', icon: null };
   const selectedStyle = selected ? 'ring-2 ring-blue-500' : 'shadow-md';
+  const dragOverStyle = isDragOver ? 'ring-2 ring-green-500 ring-offset-2' : '';
 
   return (
     <div 
-      className={`bg-white rounded-[var(--radius)] border-t-4 w-64 transition-all duration-200 group relative ${nodeStyle.border} ${selectedStyle}`}
+      className={`bg-white rounded-[var(--radius)] border-t-4 w-64 transition-all duration-200 group relative ${nodeStyle.border} ${selectedStyle} ${dragOverStyle}`}
       onDoubleClick={handleDoubleClick}
-      onDragOver={handleDragOver} 
-      onDragEnter={handleDragEnter} 
-      onDragLeave={handleDragLeave} 
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       {isPopoverOpen && <EvidencePopover evidences={evidences} onClose={() => setIsPopoverOpen(false)} />}
