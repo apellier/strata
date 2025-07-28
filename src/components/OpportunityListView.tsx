@@ -48,8 +48,10 @@ export default function OpportunityListView({ onFocusNode }: { onFocusNode: (nod
     const [loading, setLoading] = useState(true);
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' }>({ key: 'priorityScore', direction: 'descending' });
     const [outcomeFilter, setOutcomeFilter] = useState<string>('all');
-
+    const [error, setError] = useState<string | null>(null);
     const fetchData = async () => {
+        setLoading(true);
+        setError(null);
         try {
             const [oppRes, outRes] = await Promise.all([
                 fetch('/api/opportunities/list'),
@@ -61,13 +63,13 @@ export default function OpportunityListView({ onFocusNode }: { onFocusNode: (nod
             setOutcomes(outData);
         } catch (error) {
             console.error("Failed to fetch data for list view:", error);
+            setError("Could not load opportunities. Please try again later.");
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        setLoading(true);
         fetchData();
     }, []);
 
@@ -104,6 +106,7 @@ export default function OpportunityListView({ onFocusNode }: { onFocusNode: (nod
     }, [opportunities, sortConfig, outcomeFilter]);
 
     if (loading) return <div className="p-8 text-center text-gray-500">Loading opportunities...</div>;
+    if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
 
     return (
         <div className="p-6 h-full flex flex-col bg-white">
@@ -118,26 +121,26 @@ export default function OpportunityListView({ onFocusNode }: { onFocusNode: (nod
                 </div>
             </div>
             <div className="flex-grow overflow-y-auto border rounded-lg">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm table-fixed"> {/* Use table-fixed for better column control */}
                     <thead className="bg-[var(--background-alt)]">
                         <tr className="border-b border-[var(--border)]">
-                            <SortableHeader column="name" sortConfig={sortConfig} onSort={handleSort}>Name</SortableHeader>
-                            <SortableHeader column="priorityScore" sortConfig={sortConfig} onSort={handleSort}>Priority</SortableHeader>
-                            <SortableHeader column="confidence" sortConfig={sortConfig} onSort={handleSort}>Confidence</SortableHeader>
-                            <SortableHeader column="evidenceCount" sortConfig={sortConfig} onSort={handleSort}>Evidence</SortableHeader>
-                            <SortableHeader column="outcomeName" sortConfig={sortConfig} onSort={handleSort}>Outcome</SortableHeader>
+                            <th className="w-2/5 p-3 text-left"><SortableHeader column="name" sortConfig={sortConfig} onSort={handleSort}>Name</SortableHeader></th>
+                            <th className="w-1/6 p-3 text-left"><SortableHeader column="priorityScore" sortConfig={sortConfig} onSort={handleSort}>Priority</SortableHeader></th>
+                            <th className="w-1/6 p-3 text-left"><SortableHeader column="confidence" sortConfig={sortConfig} onSort={handleSort}>Confidence</SortableHeader></th>
+                            <th className="w-1/6 p-3 text-left"><SortableHeader column="evidenceCount" sortConfig={sortConfig} onSort={handleSort}>Evidence</SortableHeader></th>
+                            <th className="w-1/5 p-3 text-left"><SortableHeader column="outcomeName" sortConfig={sortConfig} onSort={handleSort}>Outcome</SortableHeader></th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border)]">
                         {sortedAndFilteredOpportunities.map(opp => (
                             <tr key={opp.id} className="hover:bg-gray-50">
-                                <td className="p-3 font-medium">
+                                <td className="p-3 font-medium truncate"> {/* Add truncate for long names */}
                                     <button onClick={() => onFocusNode(opp.id)} className="text-blue-600 hover:underline text-left">{opp.name}</button>
                                 </td>
                                 <td className="p-1 text-center"><EditableCell value={opp.priorityScore} onUpdate={(val) => handleInlineUpdate(opp.id, 'priorityScore', val)} /></td>
                                 <td className="p-1 text-center"><EditableCell value={opp.confidence} onUpdate={(val) => handleInlineUpdate(opp.id, 'confidence', val)} /></td>
                                 <td className="p-3 text-center text-gray-600">{opp.evidenceCount}</td>
-                                <td className="p-3 text-gray-600">{opp.outcomeName}</td>
+                                <td className="p-3 text-gray-600 truncate">{opp.outcomeName}</td> {/* Add truncate here as well */}
                             </tr>
                         ))}
                     </tbody>
