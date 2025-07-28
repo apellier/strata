@@ -3,10 +3,13 @@
 import React from 'react';
 import ElementDetails from './ElementDetails';
 import type { Opportunity, Solution, Outcome } from '@prisma/client';
+import { useStore, NodeData } from '@/lib/store';
+import { X } from 'lucide-react'; // <-- Import the X icon
+
 
 export type PanelState =
   | { isOpen: false }
-  | { isOpen: true; mode: 'edit'; nodeData: any };
+  | { isOpen: true; mode: 'edit'; nodeId: string };
 
 interface SidePanelProps {
   panelState: PanelState;
@@ -17,17 +20,22 @@ interface SidePanelProps {
 }
 
 export default function SidePanel({ panelState, onClose, onFocusOpportunity, onFocusSolution, onFocusOutcome }: SidePanelProps) {
+  const nodes = useStore((state) => state.nodes); 
   if (!panelState.isOpen) return null;
+
+  const node = nodes.find((n) => n.id === (panelState as any).nodeId);
+  const nodeData = node?.data;
+
   const getTitle = () => {
-    if (panelState.mode === 'edit' && panelState.nodeData) {
-      return `Details for ${panelState.nodeData.label}`;
+    if (panelState.mode === 'edit' && nodeData) {
+      return `Details for ${nodeData.label}`;
     }
     return 'Details';
   };
-  const shouldRenderDetails = panelState.mode === 'edit' && panelState.nodeData;
+  const shouldRenderDetails = panelState.mode === 'edit' && nodeData;
   const getFocusHandler = () => {
     if (!shouldRenderDetails) return () => {};
-    switch (panelState.nodeData.type) {
+    switch (nodeData.type) {
       case 'opportunity': return onFocusOpportunity;
       case 'solution': return onFocusSolution;
       case 'outcome': return onFocusOutcome;
@@ -39,11 +47,11 @@ export default function SidePanel({ panelState, onClose, onFocusOpportunity, onF
       <div className={`flex flex-col h-full ${!panelState.isOpen ? 'invisible' : ''}`}>
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-lg font-semibold truncate pr-4">{getTitle()}</h2>
-          <button onClick={onClose} className="p-2 rounded-md hover:bg-gray-200">{/* ... svg ... */}</button>
+          <button onClick={onClose} className="p-2 rounded-md hover:bg-gray-200"><X size={20} /></button>
         </div>
         <div className="p-4 overflow-y-auto flex-grow">
           {shouldRenderDetails && (
-            <ElementDetails nodeData={panelState.nodeData} onFocus={getFocusHandler()} isFocusMode={false} />
+            <ElementDetails nodeData={nodeData} onFocus={getFocusHandler()} isFocusMode={false} />
           )}
         </div>
       </div>

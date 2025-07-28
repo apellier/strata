@@ -133,13 +133,13 @@ const DiscoveryCanvasContent = ({
     const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
         const currentNodeInStore = useStore.getState().nodes.find(n => n.id === node.id);
         if (currentNodeInStore) {
-            setPanelState({ isOpen: true, mode: 'edit', nodeData: cloneDeep(currentNodeInStore.data) });
+            setPanelState({ isOpen: true, mode: 'edit', nodeId: node.id });
         }
     }, [setPanelState]);
 
     const handleNodesDelete: OnNodesDelete = useCallback((deletedNodes) => {
         if (panelState.isOpen && panelState.mode === 'edit') {
-            const isPanelNodeDeleted = deletedNodes.some(node => node.id === panelState.nodeData.id);
+            const isPanelNodeDeleted = deletedNodes.some(node => node.id === (panelState as any).nodeId);
             if (isPanelNodeDeleted) {
                 setPanelState({ isOpen: false });
             }
