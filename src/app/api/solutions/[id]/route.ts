@@ -14,7 +14,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       where: { id, userId: user.id }
     });
     if (!solution) {
-      return new NextResponseSolutionId.json({ message: 'Solution not found or unauthorized' }, { status: 404 });
+      return NextResponseSolutionId.json({ message: 'Solution not found or unauthorized' }, { status: 404 });
     }
 
     await prismaSolutionId.solution.delete({ where: { id } });

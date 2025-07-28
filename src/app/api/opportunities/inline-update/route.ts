@@ -16,7 +16,7 @@ export async function PUT(req: Request) {
       where: { id, userId: user.id }
     });
     if (!opportunity) {
-      return new NextResponseInline.json({ message: 'Opportunity not found or unauthorized' }, { status: 404 });
+      return NextResponseInline.json({ message: 'Opportunity not found or unauthorized' }, { status: 404 });
     }
 
     let data: any = {};

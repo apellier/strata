@@ -15,7 +15,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       where: { id, userId: user.id }
     });
     if (!interview) {
-      return new NextResponseInterviewId.json({ message: 'Interview not found or unauthorized' }, { status: 404 });
+      return NextResponseInterviewId.json({ message: 'Interview not found or unauthorized' }, { status: 404 });
     }
 
     await prismaInterviewId.interview.delete({ where: { id } });

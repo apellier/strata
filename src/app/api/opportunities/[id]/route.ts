@@ -19,7 +19,7 @@ export async function DELETE(
       where: { id, userId: user.id }
     });
     if (!opportunity) {
-      return new NextResponseNext.json({ message: 'Opportunity not found or unauthorized' }, { status: 404 });
+      return NextResponseNext.json({ message: 'Opportunity not found or unauthorized' }, { status: 404 });
     }
 
     await prismaClient.$transaction([

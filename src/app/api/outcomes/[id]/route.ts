@@ -14,7 +14,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       where: { id, userId: user.id }
     });
     if (!outcome) {
-      return new NextResponseOutcomeId.json({ message: 'Outcome not found or unauthorized' }, { status: 404 });
+      return NextResponseOutcomeId.json({ message: 'Outcome not found or unauthorized' }, { status: 404 });
     }
 
     await prismaOutcomeId.$transaction([
