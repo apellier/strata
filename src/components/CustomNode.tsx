@@ -11,9 +11,10 @@ const EvidencePopover = ({ evidences, opportunityId, onClose }: { evidences: (Ev
   const linkedEvidenceIds = evidences.map(e => e.id);
 
   const handleUnlink = (evidenceIdToUnlink: string) => {
-      const newEvidenceIds = linkedEvidenceIds.filter(id => id !== evidenceIdToUnlink);
-      updateNodeData(opportunityId, 'opportunity', { evidenceIds: newEvidenceIds });
-  };   
+    const newEvidenceIds = linkedEvidenceIds.filter(id => id !== evidenceIdToUnlink);
+    // This call will now work correctly because of the store fix
+    updateNodeData(opportunityId, 'opportunity', { evidenceIds: newEvidenceIds });
+};
   const evidenceColors: { [key: string]: string } = {
         VERBATIM: 'border-blue-400',
         PAIN_POINT: 'border-red-400',
@@ -29,7 +30,7 @@ const EvidencePopover = ({ evidences, opportunityId, onClose }: { evidences: (Ev
           </div>
           <div className="space-y-2">
               {evidences.length > 0 ? evidences.map(evidence => (
-                  <div key={evidence.id} className={`p-2 rounded-md border-l-4 group relative`}>
+                  <div key={evidence.id} className={`p-2 rounded-md border-l-4 group relative ${evidenceColors[evidence.type]}`}>
                       <p className="text-sm italic">"{evidence.content}"</p>
                       <p className="text-xs text-gray-500 mt-1 text-right">From: {evidence.interview.interviewee}</p>
                       <button 

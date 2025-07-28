@@ -103,12 +103,16 @@ export default function Home() {
     fetchData(id);
   };
 
-  const handleAddEvidence = async (interviewId: string, type: EvidenceType, content: string, updatedNotes: any) => {
-    // FIX: Wrap the updatedNotes string in the expected JSON structure
+  const handleAddEvidence = async (interviewId: string, type: EvidenceType, content: string, updatedNotesHTML: string) => {
+    // FIX: The notes must be sent in the correct JSON format that Prisma expects.
+    // This prevents the interview notes from being wiped out.
+    const notesPayload = { content: updatedNotesHTML };
+    
     await api.addEvidence({ interviewId, type, content });
-    await api.updateInterview(interviewId, { notes: { content: updatedNotes } });
+    await api.updateInterview(interviewId, { notes: notesPayload });
     fetchData(interviewId);
   };
+
   const handleDeleteEvidence = async (interviewId: string, evidenceId: string) => {
     await api.deleteEvidence(evidenceId);
     fetchData(interviewId);
@@ -165,8 +169,8 @@ export default function Home() {
             onClose={handleCloseEditor}
             onUpdate={handleUpdateInterview}
             // Corrected: Explicitly type the parameters
-            onAddEvidence={(type: EvidenceType, content: string, notes: any) => handleAddEvidence(editingInterview.id, type, content, notes)}
-            onDeleteEvidence={(id: string) => handleDeleteEvidence(editingInterview.id, id)}
+            onAddEvidence={(type, content, notes) => handleAddEvidence(editingInterview.id, type, content, notes)}
+            onDeleteEvidence={(id) => handleDeleteEvidence(editingInterview.id, id)}
           />
       )}
       {focusedOpportunity && ( <OpportunityEditor opportunity={focusedOpportunity} onClose={handleCloseOpportunityEditor} /> )}

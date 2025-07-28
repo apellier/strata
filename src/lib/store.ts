@@ -190,33 +190,38 @@ export const useStore = create<AppState>((set, get) => ({
   },
   
   updateNodeData: async (id, type, data) => {
-    // Optimistically update the label for immediate text feedback
-    set(state => ({
-        nodes: state.nodes.map(n => {
-            if (n.id === id) {
-                const newLabel = data.name || n.data.label;
-                return { ...n, data: { ...n.data, ...data, label: newLabel } };
-            }
-            return n;
-        })
-    }));
+    // Optimistically update the label for immediate text feedback if it exists
+    if (data.name) {
+      set(state => ({
+          nodes: state.nodes.map(n => {
+              if (n.id === id) {
+                  return { ...n, data: { ...n.data, label: data.name as string } };
+              }
+              return n;
+          })
+      }));
+    }
 
     try {
-      // Wait for the API call to complete
       const updatedNodeFromServer = await api.updateNode(type, id, data);
       
-      // Update the store with the fresh, complete data from the server
       set(state => ({
         nodes: state.nodes.map(n => {
           if (n.id === id) {
-            return { ...n, data: { ...updatedNodeFromServer, label: updatedNodeFromServer.name, type: n.data.type } as NodeData };
+            // THE FIX IS HERE: Ensure the label is always a string by falling back to the existing label.
+            // This satisfies TypeScript and fixes the refresh bugs.
+            const mergedData = { 
+              ...n.data, 
+              ...updatedNodeFromServer, 
+              label: updatedNodeFromServer.name || n.data.label 
+            };
+            return { ...n, data: mergedData };
           }
           return n;
         })
       }));
     } catch (error) {
         toast.error(`Failed to save ${type}.`);
-        // If the API call fails, revert to the server's state
         get().getCanvasData();
     }
   },
