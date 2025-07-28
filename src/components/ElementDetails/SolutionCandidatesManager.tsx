@@ -105,7 +105,8 @@ export default function SolutionCandidatesManager({ opportunity }: { opportunity
 
     const handlePromote = async (candidate: SolutionCandidate, index: number) => {
         if (window.confirm(`Are you sure you want to add "${candidate.title}" to the canvas as a new Solution?`)) {
-            await promoteIdeaToSolution(candidate.title, opportunity);
+            // Pass the full candidate object
+            await promoteIdeaToSolution(candidate, opportunity);
             handleRemoveCandidate(index);
         }
     };

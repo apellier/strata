@@ -61,14 +61,20 @@ export const deleteNode = (type: NodeType, id: string) => {
   return apiRequest<null>(path, { method: 'DELETE' });
 };
 
-export const promoteIdeaToSolution = (idea: string, opportunity: Opportunity) => {
-    const newSolutionData = {
-        name: idea,
-        opportunityId: opportunity.id,
-        x_position: opportunity.x_position + Math.random() * 100 - 50,
-        y_position: opportunity.y_position + 200,
-    };
-    return apiRequest<Solution>('/api/solutions', { method: 'POST', body: JSON.stringify(newSolutionData) });
+interface SolutionCandidateForApi {
+  title: string;
+  quickAssumptions: string[];
+}
+
+export const promoteIdeaToSolution = (candidate: SolutionCandidateForApi, opportunity: Opportunity) => {
+  const newSolutionData = {
+      name: candidate.title,
+      opportunityId: opportunity.id,
+      x_position: opportunity.x_position,
+      y_position: opportunity.y_position + 150,
+      assumptions: candidate.quickAssumptions || [],
+  };
+  return apiRequest<Solution>('/api/solutions', { method: 'POST', body: JSON.stringify(newSolutionData) });
 };
 
 export const getInterviews = () => apiRequest<(Interview & { evidences: Evidence[] })[]>('/api/interviews');

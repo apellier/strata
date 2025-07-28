@@ -12,24 +12,28 @@ export default function EvidenceLinker({ opportunity }: { opportunity: Opportuni
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        api.getAllEvidence().then(setAllEvidence);
-    }, []);
+        // Fetch all evidence when the user clicks "+ Add"
+        if (isAdding) {
+            api.getAllEvidence().then(setAllEvidence);
+        }
+    }, [isAdding]);
 
     const linkedEvidenceIds = opportunity.evidences?.map((e: Evidence) => e.id) || [];
 
-    const filteredAndUnlinkedEvidence = allEvidence.filter(e =>
-        !linkedEvidenceIds.includes(e.id) &&
+    // Filter evidence based on the search term
+    const filteredEvidence = allEvidence.filter(e =>
         e.content.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const handleLink = (evidenceId: string) => {
-        updateNodeData(opportunity.id, 'opportunity', { evidenceIds: [...linkedEvidenceIds, evidenceId] });
-        setIsAdding(false);
-        setSearchTerm('');
+        if (linkedEvidenceIds.includes(evidenceId)) return; // Prevent linking duplicates
+        const newEvidenceIds = [...linkedEvidenceIds, evidenceId];
+        updateNodeData(opportunity.id, 'opportunity', { evidenceIds: newEvidenceIds });
     };
 
     const handleUnlink = (evidenceId: string) => {
-        updateNodeData(opportunity.id, 'opportunity', { evidenceIds: linkedEvidenceIds.filter((id: string) => id !== evidenceId) });
+        const newEvidenceIds = linkedEvidenceIds.filter((id: string) => id !== evidenceId);
+        updateNodeData(opportunity.id, 'opportunity', { evidenceIds: newEvidenceIds });
     };
 
     const evidenceColors: { [key: string]: string } = {
@@ -47,13 +51,26 @@ export default function EvidenceLinker({ opportunity }: { opportunity: Opportuni
             </div>
 
             {isAdding && (
-                <div className="p-2 bg-gray-50 rounded-md mb-4 max-h-48 overflow-y-auto border">
-                    {filteredAndUnlinkedEvidence.length > 0 ? filteredAndUnlinkedEvidence.map(e => (
-                        <div key={e.id} onClick={() => handleLink(e.id)} className={`p-2 my-1 border-l-4 rounded-md cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${evidenceColors[e.type]}`}>
-                            <p className="text-sm italic">"{e.content}"</p>
-                            <p className="text-xs text-gray-500 mt-1">From: {e.interview.interviewee}</p>
-                        </div>
-                    )) : <p className="text-sm text-gray-400 text-center p-4">No more evidence to link.</p>}
+                <div className="p-2 bg-gray-50 rounded-md mb-4 border">
+                    <input
+                        type="text"
+                        placeholder="Search all evidence..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full p-2 mb-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <div className="max-h-48 overflow-y-auto">
+                        {filteredEvidence.length > 0 ? filteredEvidence.map(e => (
+                            <div 
+                                key={e.id} 
+                                onClick={() => handleLink(e.id)} 
+                                className={`p-2 my-1 border-l-4 rounded-md cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${evidenceColors[e.type]} ${linkedEvidenceIds.includes(e.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                <p className="text-sm italic">"{e.content}"</p>
+                                <p className="text-xs text-gray-500 mt-1">From: {e.interview.interviewee}</p>
+                            </div>
+                        )) : <p className="text-sm text-gray-400 text-center p-4">No matching evidence found.</p>}
+                    </div>
                 </div>
             )}
 

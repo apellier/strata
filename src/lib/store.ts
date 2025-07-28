@@ -35,7 +35,7 @@ export interface AppState {
   addNode: (type: 'outcome' | 'opportunity', parentNode?: Node<NodeData>) => Promise<void>;
   updateNodeData: (id: string, type: NodeType, data: Partial<NodeData>) => Promise<void>;
   onNodesDelete: (deletedNodes: Node<NodeData>[]) => void;
-  promoteIdeaToSolution: (idea: string, opportunity: Opportunity) => Promise<void>;
+  promoteIdeaToSolution: (candidate: { title: string; quickAssumptions: string[] }, opportunity: Opportunity) => Promise<void>;
   linkEvidenceToOpportunity: (evidenceId: string, opportunityId: string) => Promise<void>;
   createOpportunityOnDrop: (sourceNode: Node<NodeData>, position: { x: number; y: number }) => Promise<void>;
 }
@@ -113,21 +113,21 @@ export const useStore = create<AppState>((set, get) => ({
   },
   
   updateNodePosition: (id, type, position) => {
-    // Optimistically update the position in the local state
+    // Optimistically update the UI
     set(state => ({
         nodes: state.nodes.map(n => n.id === id ? { ...n, position } : n)
     }));
 
-    // Use toast.promise for better user feedback
     const apiCall = api.updateNode(type, id, { x_position: position.x, y_position: position.y });
-    
+
     toast.promise(apiCall, {
-        loading: 'Saving new position...',
+        loading: 'Saving position...',
         success: 'Position saved!',
         error: (err) => {
-            // If the API call fails, revert the change and refresh data
-            get().getCanvasData();
-            return `Failed to save position: ${err.toString()}`;
+            console.error("Failed to save position:", err);
+            // Revert on failure
+            get().getCanvasData(); 
+            return 'Failed to save position.';
         }
     });
   },
@@ -190,20 +190,35 @@ export const useStore = create<AppState>((set, get) => ({
   },
   
   updateNodeData: async (id, type, data) => {
+    // Optimistically update the label for immediate text feedback
     set(state => ({
         nodes: state.nodes.map(n => {
             if (n.id === id) {
                 const newLabel = data.name || n.data.label;
-                // Explicitly cast the returned object to Node<NodeData> to fix the error
-                return { ...n, data: { ...n.data, ...data, label: newLabel } } as Node<NodeData>;
+                return { ...n, data: { ...n.data, ...data, label: newLabel } };
             }
             return n;
         })
     }));
-    api.updateNode(type, id, data).catch(() => {
+
+    try {
+      // Wait for the API call to complete
+      const updatedNodeFromServer = await api.updateNode(type, id, data);
+      
+      // Update the store with the fresh, complete data from the server
+      set(state => ({
+        nodes: state.nodes.map(n => {
+          if (n.id === id) {
+            return { ...n, data: { ...updatedNodeFromServer, label: updatedNodeFromServer.name, type: n.data.type } as NodeData };
+          }
+          return n;
+        })
+      }));
+    } catch (error) {
         toast.error(`Failed to save ${type}.`);
+        // If the API call fails, revert to the server's state
         get().getCanvasData();
-    });
+    }
   },
 
   onNodesDelete: (deletedNodes) => {
@@ -214,8 +229,8 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  promoteIdeaToSolution: async (idea, opportunity) => {
-    const apiCall = api.promoteIdeaToSolution(idea, opportunity);
+  promoteIdeaToSolution: async (candidate, opportunity) => {
+    const apiCall = api.promoteIdeaToSolution(candidate, opportunity);
     toast.promise(apiCall, {
         loading: 'Promoting idea to solution...',
         success: 'Solution created on canvas!',
@@ -223,6 +238,8 @@ export const useStore = create<AppState>((set, get) => ({
     });
 
     const newSolution = await apiCall;
+    if (!newSolution) return; // Guard against failed API call
+
     const newNode: Node = {
         id: newSolution.id,
         type: 'default',

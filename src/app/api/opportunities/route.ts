@@ -19,8 +19,10 @@ const updateOpportunitySchema = z.object({
   evidenceIds: z.array(z.string().cuid()).optional(),
   outcomeId: z.string().cuid().optional().nullable(),
   parentId: z.string().cuid().optional().nullable(),
+  // FIX: Add position fields for saving node movements
+  x_position: z.number().optional(),
+  y_position: z.number().optional(),
 });
-
 export async function GET() {
     try {
         const opportunities = await prisma.opportunity.findMany({

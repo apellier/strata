@@ -42,7 +42,7 @@ const EditableCell = ({ value, onUpdate }: { value: number | null, onUpdate: (ne
     );
 };
 
-export default function OpportunityListView({ onFocusNode }: { onFocusNode: (nodeId: string) => void }) {
+export default function OpportunityListView({ onFocusNode, viewMode }: { onFocusNode: (nodeId: string) => void, viewMode: 'canvas' | 'list' }) {
     const [opportunities, setOpportunities] = useState<OpportunityWithDetails[]>([]);
     const [outcomes, setOutcomes] = useState<Outcome[]>([]);
     const [loading, setLoading] = useState(true);
@@ -70,8 +70,11 @@ export default function OpportunityListView({ onFocusNode }: { onFocusNode: (nod
     };
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        // Refetch data whenever this view becomes active
+        if (viewMode === 'list') {
+            fetchData();
+        }
+    }, [viewMode]);
 
     const handleSort = (key: string) => {
         let direction: 'ascending' | 'descending' = 'ascending';

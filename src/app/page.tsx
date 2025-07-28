@@ -104,11 +104,11 @@ export default function Home() {
   };
 
   const handleAddEvidence = async (interviewId: string, type: EvidenceType, content: string, updatedNotes: any) => {
+    // FIX: Wrap the updatedNotes string in the expected JSON structure
     await api.addEvidence({ interviewId, type, content });
-    await api.updateInterview(interviewId, { notes: updatedNotes });
+    await api.updateInterview(interviewId, { notes: { content: updatedNotes } });
     fetchData(interviewId);
   };
-
   const handleDeleteEvidence = async (interviewId: string, evidenceId: string) => {
     await api.deleteEvidence(evidenceId);
     fetchData(interviewId);
@@ -118,13 +118,8 @@ export default function Home() {
     <div className="h-screen w-screen flex flex-col bg-[var(--background-alt)]">
       <header className="flex-shrink-0 bg-[var(--background)] border-b border-[var(--border)] z-20">
         <div className="p-2 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-                {/* The button is now outside the main title div for clarity */}
-                <button 
-                  onClick={() => setIsHubOpen(!isHubOpen)} 
-                  className="p-2 rounded-md hover:bg-gray-100 text-gray-500" 
-                  title={isHubOpen ? "Close Research Hub" : "Open Research Hub"}
-                >
+            <div className="flex items-center space-x-2">
+                <button onClick={() => setIsHubOpen(!isHubOpen)} className="p-2 rounded-md hover:bg-gray-100 text-gray-500" title={isHubOpen ? "Close Research Hub" : "Open Research Hub"}>
                     {isHubOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
                 </button>
                 <h1 className="text-lg font-semibold text-gray-800">Strata</h1>
@@ -160,8 +155,8 @@ export default function Home() {
                   panelState={panelState}
                   setPanelState={setPanelState}
                 />
-              : <OpportunityListView onFocusNode={handleFocusNode} />
-            }
+                : <OpportunityListView onFocusNode={handleFocusNode} viewMode={viewMode} />
+              }
         </div>
       </main>
       {editingInterview && (

@@ -3,11 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { useStore } from '@/lib/store';
-import { BookText, Target, Lightbulb, FlaskConical } from 'lucide-react';
+import { BookText, Target, Lightbulb, FlaskConical, X } from 'lucide-react'; // Import X icon
 import type { Evidence, Interview } from '@prisma/client';
 
-const EvidencePopover = ({ evidences, onClose }: { evidences: (Evidence & { interview: Interview })[], onClose: () => void }) => {
-    const evidenceColors: { [key: string]: string } = {
+const EvidencePopover = ({ evidences, opportunityId, onClose }: { evidences: (Evidence & { interview: Interview })[], opportunityId: string, onClose: () => void }) => {
+  const { updateNodeData } = useStore();
+  const linkedEvidenceIds = evidences.map(e => e.id);
+
+  const handleUnlink = (evidenceIdToUnlink: string) => {
+      const newEvidenceIds = linkedEvidenceIds.filter(id => id !== evidenceIdToUnlink);
+      updateNodeData(opportunityId, 'opportunity', { evidenceIds: newEvidenceIds });
+  };   
+  const evidenceColors: { [key: string]: string } = {
         VERBATIM: 'border-blue-400',
         PAIN_POINT: 'border-red-400',
         DESIRE: 'border-green-400',
@@ -15,23 +22,30 @@ const EvidencePopover = ({ evidences, onClose }: { evidences: (Evidence & { inte
     };
 
     return (
-        <div className="absolute bottom-full mb-2 w-80 bg-white border border-[var(--border)] rounded-[var(--radius)] shadow-lg z-20 p-3 max-h-64 overflow-y-auto">
-            <div className="flex justify-between items-center mb-2">
-                <h4 className="font-bold">Linked Evidence</h4>
-                <button onClick={onClose} className="text-gray-500 hover:text-gray-800">&times;</button>
-            </div>
-            <div className="space-y-2">
-                {evidences.length > 0 ? evidences.map(evidence => (
-                    <div key={evidence.id} className={`p-2 rounded-md border-l-4 ${evidenceColors[evidence.type]}`}>
-                        <p className="text-sm italic">"{evidence.content}"</p>
-                        <p className="text-xs text-gray-500 mt-1 text-right">From: {evidence.interview.interviewee}</p>
-                    </div>
-                )) : (
-                    <p className="text-sm text-gray-400 text-center">No evidence linked.</p>
-                )}
-            </div>
-        </div>
-    );
+      <div className="absolute bottom-full mb-2 w-80 bg-white border border-[var(--border)] rounded-[var(--radius)] shadow-lg z-20 p-3 max-h-64 overflow-y-auto">
+          <div className="flex justify-between items-center mb-2">
+              <h4 className="font-bold">Linked Evidence</h4>
+              <button onClick={onClose} className="text-gray-500 hover:text-gray-800">&times;</button>
+          </div>
+          <div className="space-y-2">
+              {evidences.length > 0 ? evidences.map(evidence => (
+                  <div key={evidence.id} className={`p-2 rounded-md border-l-4 group relative`}>
+                      <p className="text-sm italic">"{evidence.content}"</p>
+                      <p className="text-xs text-gray-500 mt-1 text-right">From: {evidence.interview.interviewee}</p>
+                      <button 
+                          onClick={() => handleUnlink(evidence.id)} 
+                          className="absolute top-1 right-1 p-0.5 rounded-full bg-gray-200 text-gray-600 opacity-0 group-hover:opacity-100 hover:bg-red-100 hover:text-red-600"
+                          title="Unlink Evidence"
+                      >
+                          <X size={12} />
+                      </button>
+                  </div>
+              )) : (
+                  <p className="text-sm text-gray-400 text-center">No evidence linked.</p>
+              )}
+          </div>
+      </div>
+  );
 };
 
 export default function CustomNode({ id, data, selected }: NodeProps<any>) {
@@ -74,8 +88,8 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if(type === 'opportunity' && isDraggingEvidence) {
-        setIsDragOver(true);
+    if (data.type === 'opportunity' && isDraggingEvidence) {
+      setIsDragOver(true);
     }
   };
 
@@ -104,14 +118,14 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
 
   return (
     <div 
-      className={`bg-white rounded-[var(--radius)] border-t-4 w-64 transition-all duration-200 group relative ${nodeStyle.border} ${selectedStyle} ${dragOverStyle}`}
-      onDoubleClick={handleDoubleClick}
+    className={`bg-white rounded-[var(--radius)] border-t-4 w-64 transition-all duration-200 group relative ${nodeStyle.border} ${selectedStyle} ${dragOverStyle}`}
+    onDoubleClick={handleDoubleClick}
       onDragOver={handleDragOver}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {isPopoverOpen && <EvidencePopover evidences={evidences} onClose={() => setIsPopoverOpen(false)} />}
+      {isPopoverOpen && <EvidencePopover evidences={evidences} opportunityId={id} onClose={() => setIsPopoverOpen(false)} />}
       
       {data.type !== 'outcome' && (
         <Handle type="target" position={Position.Top} className="!bg-gray-300 !w-3 !h-3" />

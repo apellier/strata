@@ -8,6 +8,9 @@ const outcomeSchema = zOutcome.object({
   status: zOutcome.enum(['ON_TRACK', 'AT_RISK', 'ACHIEVED', 'ARCHIVED']).optional(),
   targetMetric: zOutcome.string().optional().nullable(),
   currentValue: zOutcome.number().optional().nullable(),
+  // FIX: Add position fields for saving node movements
+  x_position: zOutcome.number().optional(),
+  y_position: zOutcome.number().optional(),
 });
 
 export async function GET() {
