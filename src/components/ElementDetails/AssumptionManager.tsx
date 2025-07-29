@@ -95,6 +95,19 @@ export default function AssumptionManager({ solution }: { solution: Solution & {
                                 <label className="text-xs flex items-center gap-1">Evi: <DebouncedInput type="number" value={a.evidence} onChange={val => handleApiCall(api.updateAssumption(a.id, { evidence: parseInt(val) }), false)} className="!w-12 !p-1" /></label>
                                 <button onClick={() => handleApiCall(api.deleteAssumption(a.id))} className="text-red-500 opacity-0 group-hover:opacity-100">×</button>
                             </div>
+
+                            <div className="pt-2 border-t border-gray-200">
+                                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={a.isValidated}
+                                        onChange={(e) => handleApiCall(api.updateAssumption(a.id, { isValidated: e.target.checked }))}
+                                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    Is this assumption validated?
+                                </label>
+                            </div>
+
                             <div className="pt-2 space-y-2">
                                 {(a.experiments || []).map(exp => <ExperimentTracker key={exp.id} experiment={exp} />)}
                                 <button onClick={() => handleApiCall(api.addExperiment({ hypothesis: 'We believe that...', assumptionId: a.id }))} className="btn btn-secondary !text-xs !py-1 !px-2 w-full mt-2">+ Design Test for this Assumption</button>

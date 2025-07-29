@@ -15,8 +15,11 @@ const createOpportunitySchema = z.object({
 const updateOpportunitySchema = z.object({
   name: z.string().min(1).optional(),
   description: z.any().optional(),
-  priorityScore: z.number().optional().nullable(),
-  confidence: z.number().int().min(0).max(100).optional().nullable(),
+  riceReach: z.number().optional().nullable(),
+  riceImpact: z.number().optional().nullable(),
+  riceConfidence: z.number().optional().nullable(),
+  riceEffort: z.number().optional().nullable(),
+  status: z.enum(['BACKLOG', 'DISCOVERY', 'IN_PROGRESS', 'DONE', 'BLOCKED']).optional(),
   solutionCandidates: z.any().optional(),
   evidenceIds: z.array(z.string().cuid()).optional(),
   outcomeId: z.string().cuid().optional().nullable(),
@@ -83,6 +86,23 @@ export async function PUT(req: Request) {
     }
 
     const validatedData = updateOpportunitySchema.parse(data);
+    if (
+      validatedData.riceReach !== undefined ||
+      validatedData.riceImpact !== undefined ||
+      validatedData.riceConfidence !== undefined ||
+      validatedData.riceEffort !== undefined
+    ) {
+      const reach = validatedData.riceReach ?? opportunity.riceReach ?? 0;
+      const impact = validatedData.riceImpact ?? opportunity.riceImpact ?? 0;
+      const confidence = validatedData.riceConfidence ?? opportunity.riceConfidence ?? 0;
+      const effort = validatedData.riceEffort ?? opportunity.riceEffort ?? 1; // Default to 1 to avoid division by zero
+
+      if (effort > 0) {
+        (validatedData as any).riceScore = (reach * impact * (confidence / 100)) / effort;
+      } else {
+        (validatedData as any).riceScore = 0;
+      }
+    }
     if (validatedData.evidenceIds !== undefined) {
         (validatedData as any).evidences = {
             set: validatedData.evidenceIds.map((eid: string) => ({ id: eid }))

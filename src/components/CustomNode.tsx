@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { useStore } from '@/lib/store';
-import { BookText, Target, Lightbulb, FlaskConical, X } from 'lucide-react'; // Import X icon
-import type { Evidence, Interview } from '@prisma/client';
+import { BookText, Target, Lightbulb, FlaskConical, X, CheckCircle } from 'lucide-react'; // Import X icon
+import type { Evidence, Interview , Opportunity, Solution, Outcome, Assumption} from '@prisma/client';
 
 const EvidencePopover = ({ evidences, opportunityId, onClose }: { evidences: (Evidence & { interview: Interview })[], opportunityId: string, onClose: () => void }) => {
   const { updateNodeData } = useStore();
@@ -47,6 +47,17 @@ const EvidencePopover = ({ evidences, opportunityId, onClose }: { evidences: (Ev
           </div>
       </div>
   );
+};
+
+const getStatusStyles = (status?: string) => {
+  switch (status) {
+      case 'DISCOVERY': return { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300' };
+      case 'IN_PROGRESS': return { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300' };
+      case 'DONE': return { bg: 'bg-gray-200', text: 'text-gray-600', border: 'border-gray-300' };
+      case 'BLOCKED': return { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-500' };
+      case 'BACKLOG':
+      default: return { bg: 'bg-gray-100', text: 'text-gray-500', border: 'border-gray-200' };
+  }
 };
 
 export default function CustomNode({ id, data, selected }: NodeProps<any>) {
@@ -114,8 +125,12 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
   };
 
   const nodeStyle = typeStyles[type as keyof typeof typeStyles] || { border: 'border-t-gray-400', icon: null };
+  const statusStyles = getStatusStyles(data.status);
   const selectedStyle = selected ? 'ring-2 ring-blue-500' : 'shadow-md';
   const dragOverStyle = isDragOver ? 'ring-2 ring-green-500 ring-offset-2' : '';
+  const blockedStyle = data.status === 'BLOCKED' ? '!border-red-500 ring-2 ring-red-500' : '';
+  const validatedAssumptions = data.type === 'solution' ? data.assumptions?.filter((a: Assumption) => a.isValidated).length : 0;
+  const totalAssumptions = data.type === 'solution' ? data.assumptions?.length : 0;
 
   return (
     <div 
@@ -132,29 +147,66 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
         <Handle type="target" position={Position.Top} className="!bg-gray-300 !w-3 !h-3" />
       )}
 
-      <div className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-              {nodeStyle.icon}
-              {isEditing ? (
-                  <input type="text" value={nodeLabel} onChange={(e) => setNodeLabel(e.target.value)} onBlur={handleUpdate} onKeyDown={handleKeyDown} className="text-base font-semibold w-full bg-blue-50 border-blue-300 rounded p-1" autoFocus />
-              ) : (
-                  <div className="font-semibold text-gray-800 break-words">{label}</div>
+<div className="p-4">
+          <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                {nodeStyle.icon}
+                {isEditing ? (
+                    <input type="text" value={nodeLabel} onChange={(e) => setNodeLabel(e.target.value)} onBlur={handleUpdate} onKeyDown={handleKeyDown} className="text-base font-semibold w-full bg-blue-50 border-blue-300 rounded p-1" autoFocus />
+                ) : (
+                    <div className="font-semibold text-gray-800 break-words">{label}</div>
+                )}
+              </div>
+              {data.status && (
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusStyles.bg} ${statusStyles.text}`}>
+                  {data.status.replace('_', ' ')}
+                </span>
               )}
           </div>
-          {type === 'opportunity' && (priorityScore || confidence) && (
-              <div className="text-xs text-gray-500 flex items-center gap-4 pt-2 border-t border-gray-200">
-                  {priorityScore && <div>Priority: <span className="font-medium text-gray-700">{priorityScore}</span></div>}
-                  {confidence && <div>Confidence: <span className="font-medium text-gray-700">{confidence}%</span></div>}
+          
+          {/* --- NEW: Data-rich node content --- */}
+          <div className="space-y-2 pt-2 border-t border-gray-100">
+            {type === 'outcome' && data.targetMetric && (
+              <div>
+                <div className="flex justify-between text-xs font-medium text-gray-500">
+                  <span>Progress</span>
+                  <span>{data.currentValue || 0} / {data.targetMetric}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                  <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${((data.currentValue || 0) / (parseFloat(data.targetMetric) || 1)) * 100}%` }}></div>
+                </div>
               </div>
-          )}
+            )}
+
+            {type === 'opportunity' && data.riceScore !== null && data.riceScore !== undefined && (
+              <div className="text-sm text-gray-600">
+                RICE Score: <span className="font-bold text-blue-600">{Math.round(data.riceScore * 10) / 10}</span>
+              </div>
+            )}
+
+            {type === 'solution' && totalAssumptions > 0 && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <CheckCircle size={16} className="text-green-500" />
+                <span>{validatedAssumptions} / {totalAssumptions} Assumptions Validated</span>
+              </div>
+            )}
+          </div>
       </div>
       
       <Handle type="source" position={Position.Bottom} className="!bg-gray-300 !w-3 !h-3" />
       
-      {type === 'opportunity' && evidences.length > 0 && (
-        <button onClick={handleEvidenceClick} className="absolute -top-3 -right-3 bg-white border-2 border-gray-300 rounded-full h-7 w-7 flex items-center justify-center text-xs font-semibold text-gray-600 hover:bg-gray-100 hover:border-blue-500" title={`${evidences.length} piece(s) of evidence linked`}>
+      {/* --- NEW: Solution Count on Opportunity Node --- */}
+      {type === 'opportunity' && data.solutions?.length > 0 && (
+        <div className="absolute -bottom-3 -left-3 bg-white border-2 border-gray-300 rounded-full h-7 w-7 flex items-center justify-center text-xs font-semibold text-gray-600" title={`${data.solutions.length} solution(s)`}>
+          <FlaskConical size={14} />
+          <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center">{data.solutions.length}</span>
+        </div>
+      )}
+
+      {type === 'opportunity' && data.evidences?.length > 0 && (
+        <button onClick={handleEvidenceClick} className="absolute -top-3 -right-3 bg-white border-2 border-gray-300 rounded-full h-7 w-7 flex items-center justify-center text-xs font-semibold text-gray-600 hover:bg-gray-100 hover:border-blue-500" title={`${data.evidences.length} piece(s) of evidence linked`}>
           <BookText size={14} />
-          <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center">{evidences.length}</span>
+          <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center">{data.evidences.length}</span>
         </button>
       )}
     </div>

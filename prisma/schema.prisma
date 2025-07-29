@@ -91,8 +91,12 @@ model Opportunity {
   updatedAt          DateTime      @updatedAt
   outcomeId          String?
   parentId           String?
-  priorityScore      Float?
-  confidence         Int?
+  riceReach          Int?
+  riceImpact         Float?
+  riceConfidence     Float?
+  riceEffort         Float?
+  riceScore          Float?
+  status             WorkflowStatus @default(BACKLOG)
   solutionCandidates Json?
   outcome            Outcome?      @relation(fields: [outcomeId], references: [id], onDelete: SetNull)
   parent             Opportunity?  @relation("OpportunityToOpportunity", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -118,6 +122,7 @@ model Solution {
   opportunityId String
   opportunity   Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
   assumptions   Assumption[]
+  status        WorkflowStatus @default(BACKLOG)
   userId        String
   user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -136,6 +141,7 @@ model Assumption {
   solutionId  String
   solution    Solution       @relation(fields: [solutionId], references: [id], onDelete: Cascade)
   experiments Experiment[]
+  isValidated Boolean        @default(false)
   userId      String
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId])
@@ -181,6 +187,14 @@ model Evidence {
   userId        String
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId])
+}
+
+enum WorkflowStatus {
+  BACKLOG
+  DISCOVERY
+  IN_PROGRESS
+  DONE
+  BLOCKED
 }
 
 enum OutcomeStatus {

@@ -8,6 +8,7 @@ import { debounce } from 'lodash';
 type OpportunityWithDetails = Opportunity & {
     evidenceCount: number;
     outcomeName: string;
+    riceScore?: number | null;
 };
 
 const SortableHeader = ({ children, column, sortConfig, onSort }: { children: React.ReactNode, column: string, sortConfig: any, onSort: any }) => {
@@ -46,7 +47,7 @@ export default function OpportunityListView({ onFocusNode, viewMode }: { onFocus
     const [opportunities, setOpportunities] = useState<OpportunityWithDetails[]>([]);
     const [outcomes, setOutcomes] = useState<Outcome[]>([]);
     const [loading, setLoading] = useState(true);
-    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' }>({ key: 'priorityScore', direction: 'descending' });
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' }>({ key: 'riceScore', direction: 'descending' });
     const [outcomeFilter, setOutcomeFilter] = useState<string>('all');
     const [error, setError] = useState<string | null>(null);
     const fetchData = async () => {
@@ -128,8 +129,7 @@ export default function OpportunityListView({ onFocusNode, viewMode }: { onFocus
                     <thead className="bg-[var(--background-alt)]">
                         <tr className="border-b border-[var(--border)]">
                             <th className="w-2/5 p-3 text-left"><SortableHeader column="name" sortConfig={sortConfig} onSort={handleSort}>Name</SortableHeader></th>
-                            <th className="w-1/6 p-3 text-left"><SortableHeader column="priorityScore" sortConfig={sortConfig} onSort={handleSort}>Priority</SortableHeader></th>
-                            <th className="w-1/6 p-3 text-left"><SortableHeader column="confidence" sortConfig={sortConfig} onSort={handleSort}>Confidence</SortableHeader></th>
+                            <th className="w-1/6 p-3 text-left"><SortableHeader column="riceScore" sortConfig={sortConfig} onSort={handleSort}>RICE Score</SortableHeader></th>
                             <th className="w-1/6 p-3 text-left"><SortableHeader column="evidenceCount" sortConfig={sortConfig} onSort={handleSort}>Evidence</SortableHeader></th>
                             <th className="w-1/5 p-3 text-left"><SortableHeader column="outcomeName" sortConfig={sortConfig} onSort={handleSort}>Outcome</SortableHeader></th>
                         </tr>
@@ -137,13 +137,15 @@ export default function OpportunityListView({ onFocusNode, viewMode }: { onFocus
                     <tbody className="divide-y divide-[var(--border)]">
                         {sortedAndFilteredOpportunities.map(opp => (
                             <tr key={opp.id} className="hover:bg-gray-50">
-                                <td className="p-3 font-medium truncate"> {/* Add truncate for long names */}
+                                <td className="p-3 font-medium truncate">
                                     <button onClick={() => onFocusNode(opp.id)} className="text-blue-600 hover:underline text-left">{opp.name}</button>
                                 </td>
-                                <td className="p-1 text-center"><EditableCell value={opp.priorityScore} onUpdate={(val) => handleInlineUpdate(opp.id, 'priorityScore', val)} /></td>
-                                <td className="p-1 text-center"><EditableCell value={opp.confidence} onUpdate={(val) => handleInlineUpdate(opp.id, 'confidence', val)} /></td>
+                                {/* FIX: Display the RICE score */}
+                                <td className="p-3 text-center font-semibold text-gray-700">
+                                    {opp.riceScore !== null && opp.riceScore !== undefined ? (Math.round(opp.riceScore * 10) / 10) : 'N/A'}
+                                </td>
                                 <td className="p-3 text-center text-gray-600">{opp.evidenceCount}</td>
-                                <td className="p-3 text-gray-600 truncate">{opp.outcomeName}</td> {/* Add truncate here as well */}
+                                <td className="p-3 text-gray-600 truncate">{opp.outcomeName}</td>
                             </tr>
                         ))}
                     </tbody>

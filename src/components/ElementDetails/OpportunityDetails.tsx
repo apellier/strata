@@ -3,9 +3,13 @@
 import React, { useCallback, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useStore } from '@/lib/store';
-import { debounce } from 'lodash';
+import { debounce, update } from 'lodash';
 import SolutionCandidatesManager from './SolutionCandidatesManager';
 import EvidenceLinker from './EvidenceLinker';
+import { updateNode } from '@/lib/api';
+import RiceScoreCalculator from './RiceScoreCalculator';
+import { PropertyRow } from './ui';
+
 
 const RichTextEditor = dynamic(() => import('./RichTextEditor').then(mod => mod.RichTextEditor), { ssr: false, loading: () => <div className="p-4 text-center text-gray-400 border rounded-lg min-h-[200px]">Loading Editor...</div> });
 
@@ -41,25 +45,40 @@ const EditablePill = ({ label, value, onUpdate, placeholder }: { label: string, 
 
 export default function OpportunityDetails({ nodeData }: { nodeData: any }) {
     const { updateNodeData } = useStore();
-    const debouncedUpdate = useCallback(debounce(updateNodeData, 1000), []);
-    const handleFieldUpdate = (field: string, value: any) => {
-        let finalValue = value;
-        if (field === 'priorityScore') finalValue = parseFloat(value) || null;
-        else if (field === 'confidence') finalValue = parseInt(value, 10) || null;
-        debouncedUpdate(nodeData.id, 'opportunity', { [field]: finalValue });
-    };
-    const handleDescriptionChange = (newDescription: any) => {
-        debouncedUpdate(nodeData.id, 'opportunity', { description: newDescription });
-    };
+    const handleUpdate = useCallback((data: any) => {
+        updateNodeData(nodeData.id, 'opportunity', data);
+    }, [nodeData.id, updateNodeData]);
+    const handleRiceUpdate = useCallback((riceData: any) => {
+        updateNodeData(nodeData.id, 'opportunity', riceData);
+    }, [nodeData.id, updateNodeData]);
+
+    const debouncedDescriptionUpdate = useCallback(debounce((newDescription: any) => {
+        updateNodeData(nodeData.id, 'opportunity', { description: newDescription });
+    }, 1000), [nodeData.id, updateNodeData]);
+
+    
     return (
         <div className="space-y-6">
-            <div className="flex items-center gap-6 p-2 bg-gray-50 rounded-lg">
-                <EditablePill label="Priority" value={nodeData.priorityScore} onUpdate={(val) => handleFieldUpdate('priorityScore', val)} placeholder="e.g., 8.5" />
-                <EditablePill label="Confidence" value={nodeData.confidence} onUpdate={(val) => handleFieldUpdate('confidence', val)} placeholder="0-100" />
-            </div>
+            {/* --- NEW: Status Dropdown --- */}
+            <PropertyRow label="Status">
+                <select 
+                    value={nodeData.status || 'BACKLOG'} 
+                    onChange={(e) => handleUpdate({ status: e.target.value })}
+                    className="w-full p-1 bg-gray-50 border border-transparent hover:border-gray-300 rounded focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 transition"
+                >
+                    <option value="BACKLOG">Backlog</option>
+                    <option value="DISCOVERY">Discovery</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="DONE">Done</option>
+                    <option value="BLOCKED">Blocked</option>
+                </select>
+            </PropertyRow>
+
+            <RiceScoreCalculator nodeData={nodeData} onUpdate={handleUpdate} />
+            
             <div className="mt-4">
                 <h3 className="text-sm font-semibold text-gray-600 mb-2">Notes & Description</h3>
-                <RichTextEditor key={nodeData.id} content={nodeData.description} onChange={handleDescriptionChange} />
+                <RichTextEditor key={nodeData.id} content={nodeData.description} onChange={debouncedDescriptionUpdate} />
             </div>
             <SolutionCandidatesManager opportunity={nodeData} />
             <EvidenceLinker opportunity={nodeData} />

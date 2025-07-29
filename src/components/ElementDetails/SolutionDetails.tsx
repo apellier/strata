@@ -5,20 +5,38 @@ import dynamic from 'next/dynamic';
 import { useStore } from '@/lib/store';
 import { debounce } from 'lodash';
 import AssumptionManager from './AssumptionManager';
+import { PropertyRow } from './ui';
 
 const RichTextEditor = dynamic(() => import('./RichTextEditor').then(mod => mod.RichTextEditor), { ssr: false, loading: () => <div className="p-4 text-center text-gray-400 border rounded-lg min-h-[200px]">Loading Editor...</div> });
 
 export default function SolutionDetails({ nodeData }: { nodeData: any }) {
     const { updateNodeData } = useStore();
-    const debouncedUpdate = useCallback(debounce(updateNodeData, 1000), []);
-    const handleDescriptionChange = (newDescription: any) => {
-        debouncedUpdate(nodeData.id, 'solution', { description: newDescription });
-    };
+    const handleUpdate = useCallback((data: any) => {
+        updateNodeData(nodeData.id, 'solution', data);
+    }, [nodeData.id, updateNodeData]);
+    const debouncedDescriptionUpdate = useCallback(debounce((newDescription: any) => {
+        handleUpdate({ description: newDescription });
+    }, 1000), [handleUpdate]);
     return (
         <div className="space-y-6">
+            {/* --- NEW: Status Dropdown --- */}
+            <PropertyRow label="Status">
+                <select 
+                    value={nodeData.status || 'BACKLOG'} 
+                    onChange={(e) => handleUpdate({ status: e.target.value })}
+                    className="w-full p-1 bg-gray-50 border border-transparent hover:border-gray-300 rounded focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 transition"
+                >
+                    <option value="BACKLOG">Backlog</option>
+                    <option value="DISCOVERY">Discovery</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="DONE">Done</option>
+                    <option value="BLOCKED">Blocked</option>
+                </select>
+            </PropertyRow>
+
             <div className="mt-4">
                 <h3 className="text-sm font-semibold text-gray-600 mb-2">Notes & Description</h3>
-                <RichTextEditor key={nodeData.id} content={nodeData.description} onChange={handleDescriptionChange} />
+                <RichTextEditor key={nodeData.id} content={nodeData.description} onChange={debouncedDescriptionUpdate} />
             </div>
             <AssumptionManager solution={nodeData} />
         </div>
