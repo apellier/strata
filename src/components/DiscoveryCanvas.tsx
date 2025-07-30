@@ -15,14 +15,34 @@ import ReactFlow, {
   OnNodesDelete,
   OnConnectStart,
   OnConnectEnd,
+  NodePositionChange,
+  XYPosition
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { cloneDeep } from 'lodash';
 
 import SidePanel, { PanelState } from './SidePanel';
 import CustomNode from './CustomNode';
-import { useStore } from '@/lib/store';
+import { useStore, NodeData } from '@/lib/store';
 import type { Opportunity, Solution, Outcome } from '@prisma/client';
+
+// Helper to get edge styles based on target node status
+const getEdgeStyles = (sourceNode?: Node<NodeData>, targetNode?: Node<NodeData>) => {
+    // Default style
+    let style = { stroke: '#b1b1b7', strokeWidth: 2 };
+
+    if (targetNode?.data?.type === 'opportunity' || targetNode?.data?.type === 'solution') {
+        switch (targetNode.data.status) {
+            case 'DISCOVERY': return { stroke: '#8b5cf6', strokeWidth: 2.5, animated: true };
+            case 'IN_PROGRESS': return { stroke: '#22c55e', strokeWidth: 2.5, animated: true };
+            case 'DONE': return { stroke: '#6b7280', strokeWidth: 2 };
+            case 'BLOCKED': return { stroke: '#ef4444', strokeWidth: 2.5, strokeDasharray: '5,5' };
+            case 'BACKLOG':
+            default: return { stroke: '#b1b1b7', strokeWidth: 2, strokeDasharray: '5,5' };
+        }
+    }
+    return style;
+};
 
 // This new component contains all the logic and state that needs the React Flow context
 const DiscoveryCanvasContent = ({
@@ -47,6 +67,12 @@ const DiscoveryCanvasContent = ({
     const { screenToFlowPosition, getNode, fitView } = useReactFlow();
     const connectingNodeId = useRef<string | null>(null);
     const [isDraggingEvidence, setIsDraggingEvidence] = useState(false);
+
+    // --- State for Parent-Child Dragging ---
+    const dragData = useRef<{
+        draggedNodeId: string;
+        children: { id: string; position: XYPosition }[];
+    } | null>(null);
 
     useEffect(() => {
         getCanvasData();
@@ -101,6 +127,102 @@ const DiscoveryCanvasContent = ({
             addNode(type);
         }
     };
+
+        // --- Dynamic Edge Styling ---
+        const styledEdges = useMemo(() => {
+            return edges.map(edge => {
+                const sourceNode = getNode(edge.source!);
+                const targetNode = getNode(edge.target!);
+                return {
+                    ...edge,
+                    ...getEdgeStyles(sourceNode, targetNode),
+                };
+            });
+        }, [edges, nodes, getNode]); // Add getNode to dependency array
+    
+    
+        // --- Parent-Child Dragging Logic ---
+        const onNodeDragStart: NodeDragHandler = useCallback((_, node) => {
+            const childNodes = edges
+                .filter(edge => edge.source === node.id)
+                .map(edge => {
+                    const childNode = getNode(edge.target);
+                    return childNode ? { id: childNode.id, position: childNode.position } : null;
+                })
+                .filter(Boolean) as { id: string; position: XYPosition }[];
+    
+            if (childNodes.length > 0) {
+                dragData.current = {
+                    draggedNodeId: node.id,
+                    children: childNodes,
+                };
+            }
+        }, [edges, getNode]);
+    
+        const onNodeDrag: NodeDragHandler = useCallback((event, draggedNode) => {
+            if (!dragData.current || dragData.current.draggedNodeId !== draggedNode.id) {
+                return;
+            }
+    
+            const parentStartPos = useStore.getState().nodes.find(n => n.id === draggedNode.id)?.position;
+            if (!parentStartPos) return;
+    
+            const diff = {
+                x: draggedNode.position.x - parentStartPos.x,
+                y: draggedNode.position.y - parentStartPos.y,
+            };
+    
+            const updatedNodes = useStore.getState().nodes.map(n => {
+                if (n.id === draggedNode.id) return { ...n, position: draggedNode.position };
+                
+                const childData = dragData.current?.children.find(c => c.id === n.id);
+                if (childData) {
+                    return {
+                        ...n,
+                        position: {
+                            x: childData.position.x + diff.x,
+                            y: childData.position.y + diff.y,
+                        },
+                    };
+                }
+                return n;
+            });
+    
+            useStore.setState({ nodes: updatedNodes });
+        }, []);
+    
+        const onNodeDragStop: NodeDragHandler = useCallback((_, node) => {
+            if (dragData.current) {
+                // Save parent position
+                updateNodePosition(node.id, node.data.type, node.position);
+                
+                // Save children positions
+                const parentStartPos = useStore.getState().nodes.find(n => n.id === node.id)?.position;
+                if (parentStartPos) {
+                    const diff = {
+                        x: node.position.x - parentStartPos.x,
+                        y: node.position.y - parentStartPos.y,
+                    };
+    
+                    dragData.current.children.forEach(child => {
+                        const childNode = getNode(child.id);
+                        if (childNode) {
+                            const newPosition = {
+                                x: child.position.x + diff.x,
+                                y: child.position.y + diff.y,
+                            };
+                            updateNodePosition(childNode.id, childNode.data.type, newPosition);
+                        }
+                    });
+                }
+            } else {
+                // Default behavior for nodes without children
+                updateNodePosition(node.id, node.data.type, node.position);
+            }
+            dragData.current = null;
+        }, [updateNodePosition, getNode]);
+
+
     
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -125,10 +247,6 @@ const DiscoveryCanvasContent = ({
             document.removeEventListener('dragend', handleDragEnd);
         };
     }, []);
-
-    const onNodeDragStop: NodeDragHandler = useCallback((_event, node) => {
-        updateNodePosition(node.id, node.data.type, node.position);
-    }, [updateNodePosition]);
 
     const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
         const currentNodeInStore = useStore.getState().nodes.find(n => n.id === node.id);
@@ -178,7 +296,7 @@ const DiscoveryCanvasContent = ({
             >
                 <ReactFlow
                     nodes={nodes.map(node => ({ ...node, data: { ...node.data, isDraggingEvidence } }))}
-                    edges={edges}
+                    edges={styledEdges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
                     onConnect={onConnect}

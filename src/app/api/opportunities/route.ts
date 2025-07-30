@@ -33,15 +33,23 @@ export async function GET() {
     if (error) return error;
 
     try {
-        const opportunities = await prisma.opportunity.findMany({
-            where: { userId: user.id },
-            include: { evidences: { include: { interview: true } } }
-        });
-        return NextResponse.json(opportunities);
-    } catch (error) {
-        console.error("Error fetching opportunities:", error);
-        return new NextResponse(JSON.stringify({ message: 'Failed to fetch opportunities' }), { status: 500 });
-    }
+      const opportunities = await prisma.opportunity.findMany({
+        where: { userId: user.id },
+        include: { 
+            evidences: { include: { interview: true } },
+            // FIX: This is the corrected Prisma syntax for counting a relation
+            _count: {
+                select: {
+                    solutions: true
+                }
+            }
+        }
+    });
+      return NextResponse.json(opportunities);
+  } catch (error) {
+      console.error("Error fetching opportunities:", error);
+      return new NextResponse(JSON.stringify({ message: 'Failed to fetch opportunities' }), { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {

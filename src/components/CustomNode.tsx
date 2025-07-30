@@ -51,17 +51,28 @@ const EvidencePopover = ({ evidences, opportunityId, onClose }: { evidences: (Ev
 
 const getStatusStyles = (status?: string) => {
   switch (status) {
-      case 'DISCOVERY': return { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300' };
-      case 'IN_PROGRESS': return { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300' };
-      case 'DONE': return { bg: 'bg-gray-200', text: 'text-gray-600', border: 'border-gray-300' };
-      case 'BLOCKED': return { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-500' };
+      case 'DISCOVERY': return { bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500' };
+      case 'IN_PROGRESS': return { bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500' };
+      case 'DONE': return { bg: 'bg-gray-200', text: 'text-gray-600', dot: 'bg-gray-500' };
+      case 'BLOCKED': return { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' };
       case 'BACKLOG':
-      default: return { bg: 'bg-gray-100', text: 'text-gray-500', border: 'border-gray-200' };
+      default: return { bg: 'bg-gray-100', text: 'text-gray-500', dot: 'bg-gray-400' };
   }
 };
 
+const getOutcomeStatusStyles = (status?: string) => {
+  switch (status) {
+      case 'AT_RISK': return { dot: 'bg-amber-500' };
+      case 'ACHIEVED': return { dot: 'bg-blue-500' };
+      case 'ARCHIVED': return { dot: 'bg-gray-400' };
+      case 'ON_TRACK':
+      default: return { dot: 'bg-green-500' };
+  }
+};
+
+
 export default function CustomNode({ id, data, selected }: NodeProps<any>) {
-  const { label, type, evidences = [], priorityScore, confidence } = data;
+  const { label, type, evidences = [], riceScore, solutions, status } = data;
   const [isEditing, setIsEditing] = useState(false);
   const [nodeLabel, setNodeLabel] = useState(label);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -124,13 +135,16 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
     solution: { border: 'border-t-green-500', icon: <FlaskConical size={16} className="text-green-500" /> },
   };
 
+
   const nodeStyle = typeStyles[type as keyof typeof typeStyles] || { border: 'border-t-gray-400', icon: null };
-  const statusStyles = getStatusStyles(data.status);
+  const workflowStatusStyles = getStatusStyles(status);
+  const outcomeStatusStyles = getOutcomeStatusStyles(data.status);
   const selectedStyle = selected ? 'ring-2 ring-blue-500' : 'shadow-md';
   const dragOverStyle = isDragOver ? 'ring-2 ring-green-500 ring-offset-2' : '';
-  const blockedStyle = data.status === 'BLOCKED' ? '!border-red-500 ring-2 ring-red-500' : '';
-  const validatedAssumptions = data.type === 'solution' ? data.assumptions?.filter((a: Assumption) => a.isValidated).length : 0;
-  const totalAssumptions = data.type === 'solution' ? data.assumptions?.length : 0;
+  const blockedStyle = status === 'BLOCKED' ? '!border-red-500 ring-2 ring-red-500' : '';
+  const validatedAssumptions = type === 'solution' ? data.assumptions?.filter((a: Assumption) => a.isValidated).length : 0;
+  const totalAssumptions = type === 'solution' ? data.assumptions?.length : 0;
+  const solutionCount = solutions?._count?.solutions ?? 0;
 
   return (
     <div 
@@ -148,8 +162,10 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
       )}
 
 <div className="p-4">
-          <div className="flex items-start justify-between gap-2 mb-2">
+<div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
+                {/* FIX: Add colored status dot for Outcomes */}
+                {type === 'outcome' && <span className={`w-3 h-3 rounded-full ${outcomeStatusStyles.dot} mt-1 flex-shrink-0`}></span>}
                 {nodeStyle.icon}
                 {isEditing ? (
                     <input type="text" value={nodeLabel} onChange={(e) => setNodeLabel(e.target.value)} onBlur={handleUpdate} onKeyDown={handleKeyDown} className="text-base font-semibold w-full bg-blue-50 border-blue-300 rounded p-1" autoFocus />
@@ -157,9 +173,9 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
                     <div className="font-semibold text-gray-800 break-words">{label}</div>
                 )}
               </div>
-              {data.status && (
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusStyles.bg} ${statusStyles.text}`}>
-                  {data.status.replace('_', ' ')}
+              {status && type !== 'outcome' && (
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${workflowStatusStyles.bg} ${workflowStatusStyles.text}`}>
+                  {status.replace('_', ' ')}
                 </span>
               )}
           </div>
@@ -196,14 +212,14 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
       <Handle type="source" position={Position.Bottom} className="!bg-gray-300 !w-3 !h-3" />
       
       {/* --- NEW: Solution Count on Opportunity Node --- */}
-      {type === 'opportunity' && data.solutions?.length > 0 && (
-        <div className="absolute -bottom-3 -left-3 bg-white border-2 border-gray-300 rounded-full h-7 w-7 flex items-center justify-center text-xs font-semibold text-gray-600" title={`${data.solutions.length} solution(s)`}>
+      {type === 'opportunity' && solutionCount > 0 && (
+        <div className="absolute -bottom-3 -left-3 bg-white border-2 border-gray-300 rounded-full h-7 w-7 flex items-center justify-center text-xs font-semibold text-gray-600" title={`${solutionCount} solution(s)`}>
           <FlaskConical size={14} />
-          <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center">{data.solutions.length}</span>
+          <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center">{solutionCount}</span>
         </div>
       )}
 
-      {type === 'opportunity' && data.evidences?.length > 0 && (
+      {type === 'opportunity' && evidences?.length > 0 && (
         <button onClick={handleEvidenceClick} className="absolute -top-3 -right-3 bg-white border-2 border-gray-300 rounded-full h-7 w-7 flex items-center justify-center text-xs font-semibold text-gray-600 hover:bg-gray-100 hover:border-blue-500" title={`${data.evidences.length} piece(s) of evidence linked`}>
           <BookText size={14} />
           <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center">{data.evidences.length}</span>

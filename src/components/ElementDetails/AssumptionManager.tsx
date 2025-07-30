@@ -60,15 +60,18 @@ export default function AssumptionManager({ solution }: { solution: Solution & {
     const { getCanvasData } = useStore();
     const [view, setView] = useState<'list' | 'matrix'>('list');
     const assumptions = solution.assumptions || [];
-    const handleApiCall = async (apiCall: Promise<any>, refresh: boolean = true) => {
+    const handleApiCall = async (apiCall: Promise<any>) => {
         try {
             await apiCall;
-            if (refresh) await getCanvasData();
+            // This will refresh the entire canvas state, ensuring this component re-renders
+            // with the latest data from the server.
+            getCanvasData();
         } catch (error) {
             const message = error instanceof Error ? error.message : "An unknown error occurred.";
             alert(`An error occurred: ${message}`);
         }
     };
+
     return (
         <div className="border-t pt-4 mt-4">
             <div className="flex justify-between items-center mb-4">
@@ -85,14 +88,14 @@ export default function AssumptionManager({ solution }: { solution: Solution & {
                 <div className="space-y-3">
                     {assumptions.map((a) => (
                         <div key={a.id} className="p-3 bg-gray-100 rounded-lg space-y-2 group">
-                            <DebouncedInput value={a.description} onChange={val => handleApiCall(api.updateAssumption(a.id, { description: val }), false)} type="textarea" />
+                            <DebouncedInput value={a.description} onChange={val => handleApiCall(api.updateAssumption(a.id, { description: val }))} type="textarea" />
                             <div className="flex items-center space-x-4">
                                 <select value={a.type} onChange={e => handleApiCall(api.updateAssumption(a.id, { type: e.target.value as any }))} className="text-xs p-1 rounded border-gray-300 bg-white">
                                     <option>DESIRABILITY</option><option>VIABILITY</option><option>FEASIBILITY</option><option>USABILITY</option><option>ETHICAL</option>
                                 </select>
                                 <div className="flex-grow" />
-                                <label className="text-xs flex items-center gap-1">Imp: <DebouncedInput type="number" value={a.importance} onChange={val => handleApiCall(api.updateAssumption(a.id, { importance: parseInt(val) }), false)} className="!w-12 !p-1" /></label>
-                                <label className="text-xs flex items-center gap-1">Evi: <DebouncedInput type="number" value={a.evidence} onChange={val => handleApiCall(api.updateAssumption(a.id, { evidence: parseInt(val) }), false)} className="!w-12 !p-1" /></label>
+                                <label className="text-xs flex items-center gap-1">Imp: <DebouncedInput type="number" value={a.importance} onChange={val => handleApiCall(api.updateAssumption(a.id, { importance: parseInt(val) }))} className="!w-12 !p-1" /></label>
+                                <label className="text-xs flex items-center gap-1">Evi: <DebouncedInput type="number" value={a.evidence} onChange={val => handleApiCall(api.updateAssumption(a.id, { evidence: parseInt(val) }))} className="!w-12 !p-1" /></label>
                                 <button onClick={() => handleApiCall(api.deleteAssumption(a.id))} className="text-red-500 opacity-0 group-hover:opacity-100">×</button>
                             </div>
 
