@@ -1,3 +1,4 @@
+// src/components/CustomNode.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -33,8 +34,8 @@ const EvidencePopover = ({ evidences, opportunityId, onClose }: { evidences: (Ev
                   <div key={evidence.id} className={`p-2 rounded-md border-l-4 group relative ${evidenceColors[evidence.type]}`}>
                       <p className="text-sm italic">"{evidence.content}"</p>
                       <p className="text-xs text-gray-500 mt-1 text-right">From: {evidence.interview.interviewee}</p>
-                      <button 
-                          onClick={() => handleUnlink(evidence.id)} 
+                      <button
+                          onClick={() => handleUnlink(evidence.id)}
                           className="absolute top-1 right-1 p-0.5 rounded-full bg-gray-200 text-gray-600 opacity-0 group-hover:opacity-100 hover:bg-red-100 hover:text-red-600"
                           title="Unlink Evidence"
                       >
@@ -72,7 +73,7 @@ const getOutcomeStatusStyles = (status?: string) => {
 
 
 export default function CustomNode({ id, data, selected }: NodeProps<any>) {
-  const { label, type, evidences = [], riceScore, solutions, status } = data;
+  const { label, type, evidences = [], riceScore, solutions, status, _count } = data;
   const [isEditing, setIsEditing] = useState(false);
   const [nodeLabel, setNodeLabel] = useState(label);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -98,7 +99,7 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
       setIsEditing(false);
     }
   };
-  
+
   const handleEvidenceClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsPopoverOpen(!isPopoverOpen);
@@ -144,10 +145,10 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
   const blockedStyle = status === 'BLOCKED' ? '!border-red-500 ring-2 ring-red-500' : '';
   const validatedAssumptions = type === 'solution' ? data.assumptions?.filter((a: Assumption) => a.isValidated).length : 0;
   const totalAssumptions = type === 'solution' ? data.assumptions?.length : 0;
-  const solutionCount = solutions?._count?.solutions ?? 0;
+  const solutionCount = _count?.solutions ?? 0;
 
   return (
-    <div 
+    <div
     className={`bg-white rounded-[var(--radius)] border-t-4 w-64 transition-all duration-200 group relative ${nodeStyle.border} ${selectedStyle} ${dragOverStyle}`}
     onDoubleClick={handleDoubleClick}
       onDragOver={handleDragOver}
@@ -156,7 +157,7 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
       onDrop={handleDrop}
     >
       {isPopoverOpen && <EvidencePopover evidences={evidences} opportunityId={id} onClose={() => setIsPopoverOpen(false)} />}
-      
+
       {data.type !== 'outcome' && (
         <Handle type="target" position={Position.Top} className="!bg-gray-300 !w-3 !h-3" />
       )}
@@ -179,7 +180,7 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
                 </span>
               )}
           </div>
-          
+
           {/* --- NEW: Data-rich node content --- */}
           <div className="space-y-2 pt-2 border-t border-gray-100">
             {type === 'outcome' && data.targetMetric && (
@@ -208,9 +209,9 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
             )}
           </div>
       </div>
-      
+
       <Handle type="source" position={Position.Bottom} className="!bg-gray-300 !w-3 !h-3" />
-      
+
       {/* --- NEW: Solution Count on Opportunity Node --- */}
       {type === 'opportunity' && solutionCount > 0 && (
         <div className="absolute -bottom-3 -left-3 bg-white border-2 border-gray-300 rounded-full h-7 w-7 flex items-center justify-center text-xs font-semibold text-gray-600" title={`${solutionCount} solution(s)`}>

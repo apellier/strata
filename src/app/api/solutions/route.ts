@@ -1,4 +1,4 @@
-
+// src/app/api/solutions/route.ts
 import { NextResponse as NextResponseSolution } from 'next/server';
 import prismaSolution from '@/lib/db';
 import { z as zSolution } from 'zod';
@@ -17,6 +17,7 @@ const updateSolutionSchema = zSolution.object({
   description: zSolution.any().optional(),
   x_position: zSolution.number().optional(),
   y_position: zSolution.number().optional(),
+  status: zSolution.enum(['BACKLOG', 'DISCOVERY', 'IN_PROGRESS', 'DONE', 'BLOCKED']).optional(), // <-- FIX: Added status
 });
 
 export async function GET() {
@@ -42,10 +43,9 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const validatedData = createSolutionSchema.parse(body);
-    
+
     const { assumptions, ...solutionData } = validatedData;
 
-    // Verify user owns the parent opportunity
     const opportunity = await prismaSolution.opportunity.findFirst({
         where: { id: solutionData.opportunityId, userId: user.id }
     });
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
         return new NextResponseSolution(JSON.stringify({ message: 'Opportunity not found or unauthorized' }), { status: 404 });
     }
 
-    const newSolution = await prismaSolution.solution.create({ 
+    const newSolution = await prismaSolution.solution.create({
         data: {
             ...solutionData,
             userId: user.id,
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
             data: assumptions.map(desc => ({
                 description: desc,
                 solutionId: newSolution.id,
-                userId: user.id, // Also tag assumptions with userId
+                userId: user.id,
             })),
         });
     }
@@ -93,7 +93,7 @@ export async function PUT(req: Request) {
     try {
         const { id, ...data } = await req.json();
         if (!id) return new NextResponseSolution(JSON.stringify({ message: 'Solution ID is required' }), { status: 400 });
-        
+
         const solution = await prismaSolution.solution.findFirst({
             where: { id, userId: user.id }
         });

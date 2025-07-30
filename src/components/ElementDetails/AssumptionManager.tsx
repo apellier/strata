@@ -1,3 +1,4 @@
+// src/components/ElementDetails/AssumptionManager.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -90,7 +91,7 @@ export default function AssumptionManager({ solution }: { solution: Solution & {
                         <div key={a.id} className="p-3 bg-gray-100 rounded-lg space-y-2 group">
                             <DebouncedInput value={a.description} onChange={val => handleApiCall(api.updateAssumption(a.id, { description: val }))} type="textarea" />
                             <div className="flex items-center space-x-4">
-                                <select value={a.type} onChange={e => handleApiCall(api.updateAssumption(a.id, { type: e.target.value as any }))} className="text-xs p-1 rounded border-gray-300 bg-white">
+                                <select value={a.type || 'DESIRABILITY'} onChange={e => handleApiCall(api.updateAssumption(a.id, { type: e.target.value as any }))} className="text-xs p-1 rounded border-gray-300 bg-white">
                                     <option>DESIRABILITY</option><option>VIABILITY</option><option>FEASIBILITY</option><option>USABILITY</option><option>ETHICAL</option>
                                 </select>
                                 <div className="flex-grow" />
@@ -103,7 +104,7 @@ export default function AssumptionManager({ solution }: { solution: Solution & {
                                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
                                     <input
                                         type="checkbox"
-                                        checked={a.isValidated}
+                                        checked={!!a.isValidated}
                                         onChange={(e) => handleApiCall(api.updateAssumption(a.id, { isValidated: e.target.checked }))}
                                         className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                     />

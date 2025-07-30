@@ -1,3 +1,4 @@
+// src/lib/store.ts
 import { create } from 'zustand';
 import { Node, Edge, OnNodesChange, OnEdgesChange, applyNodeChanges, applyEdgeChanges, Connection } from 'reactflow';
 import * as api from './api';
@@ -53,15 +54,15 @@ export const useStore = create<AppState>((set, get) => ({
       const newEdges: Edge[] = [];
 
       outcomes.forEach((o) => newNodes.push({ id: o.id, type: 'default', position: { x: o.x_position, y: o.y_position }, data: { ...o, label: o.name, type: 'outcome' } }));
-      
+
       opportunities.forEach((o) => {
-          newNodes.push({ id: o.id, type: 'default', position: { x: o.x_position, y: o.y_position }, data: { ...o, label: o.name, type: 'opportunity' } });
+          newNodes.push({ id: o.id, type: 'default', position: { x: o.x_position, y: o.y_position }, data: { ...o, label: o.name, type: 'opportunity' } as TypedOpportunity });
           if (o.parentId) newEdges.push({ id: `e-${o.parentId}-${o.id}`, source: o.parentId, target: o.id, animated: true });
           else if (o.outcomeId) newEdges.push({ id: `e-${o.outcomeId}-${o.id}`, source: o.outcomeId, target: o.id, animated: true });
       });
 
       solutions.forEach((s) => {
-          newNodes.push({ id: s.id, type: 'default', position: { x: s.x_position, y: s.y_position }, data: { ...s, label: s.name, type: 'solution' } });
+          newNodes.push({ id: s.id, type: 'default', position: { x: s.x_position, y: s.y_position }, data: { ...s, label: s.name, type: 'solution' } as TypedSolution });
           if (s.opportunityId) {
               newEdges.push({ id: `e-${s.opportunityId}-${s.id}`, source: s.opportunityId, target: s.id, animated: true, style: { stroke: '#1DB954', strokeWidth: 2 } });
           }
@@ -80,7 +81,7 @@ export const useStore = create<AppState>((set, get) => ({
   onConnect: async (connection) => {
     const { source, target } = connection;
     if (!source || !target) return;
-    
+
     const { nodes } = get();
     const sourceNode = nodes.find(n => n.id === source);
     const targetNode = nodes.find(n => n.id === target);
@@ -97,23 +98,36 @@ export const useStore = create<AppState>((set, get) => ({
     } else if (targetType === 'solution') {
         updateData = { opportunityId: source };
     }
-    
+
     const updatedNode = await toast.promise(api.updateNode(targetType, target, updateData), {
         loading: 'Connecting nodes...',
         success: 'Nodes connected!',
         error: 'Failed to connect nodes.',
     });
-    
-    if (updatedNode) { // This check prevents the spread error
+
+    if (updatedNode) {
         set(state => ({
             edges: applyEdgeChanges([{ type: 'add', item: { id: `e-${source}-${target}`, source, target, animated: true } }], state.edges),
-            nodes: state.nodes.map(n => n.id === target ? { ...n, data: { ...n.data, ...updatedNode } } : n)
+            nodes: state.nodes.map(n => {
+                if (n.id === target) {
+                    // FIX: Smartly merge the data to preserve required properties like `evidences`
+                    const mergedData = {
+                        ...n.data,
+                        ...updatedNode,
+                        label: updatedNode.name || n.data.label
+                    };
+                    if (n.data.type === 'opportunity' && !('evidences' in updatedNode)) {
+                        (mergedData as TypedOpportunity).evidences = n.data.evidences;
+                    }
+                    return { ...n, data: mergedData as NodeData };
+                }
+                return n;
+            })
         }));
     }
   },
-  
+
   updateNodePosition: (id, type, position) => {
-    // Optimistically update the UI
     set(state => ({
         nodes: state.nodes.map(n => n.id === id ? { ...n, position } : n)
     }));
@@ -125,8 +139,7 @@ export const useStore = create<AppState>((set, get) => ({
         success: 'Position saved!',
         error: (err) => {
             console.error("Failed to save position:", err);
-            // Revert on failure
-            get().getCanvasData(); 
+            get().getCanvasData();
             return 'Failed to save position.';
         }
     });
@@ -137,7 +150,6 @@ export const useStore = create<AppState>((set, get) => ({
     let position = { x: 100, y: 100 };
 
     if (parentNode) {
-      // Use a type guard to safely access properties
       const children = nodes.filter(n => {
         if (n.data.type === 'opportunity') {
           return n.data.parentId === parentNode.id || n.data.outcomeId === parentNode.id;
@@ -168,12 +180,20 @@ export const useStore = create<AppState>((set, get) => ({
 
     if (!createdNode) return;
 
-    // Cast the final data object to NodeData to satisfy the compiler
+    const newNodeData: NodeData = {
+      ...(createdNode as any),
+      label: createdNode.name,
+      type: type,
+      // Ensure opportunity nodes have an empty evidences array on creation
+      ...(type === 'opportunity' && { evidences: [] }),
+    };
+
+
     const newNode: Node<NodeData> = {
         id: createdNode.id,
         type: 'default',
         position,
-        data: { ...createdNode, label: createdNode.name, type } as NodeData,
+        data: newNodeData,
     };
 
     set(state => ({ nodes: [...state.nodes, newNode] }));
@@ -188,9 +208,8 @@ export const useStore = create<AppState>((set, get) => ({
         set(state => ({ edges: [...state.edges, newEdge] }));
     }
   },
-  
+
   updateNodeData: async (id, type, data) => {
-    // Optimistically update the label for immediate text feedback if it exists
     if (data.name) {
       set(state => ({
           nodes: state.nodes.map(n => {
@@ -204,16 +223,14 @@ export const useStore = create<AppState>((set, get) => ({
 
     try {
       const updatedNodeFromServer = await api.updateNode(type, id, data);
-      
+
       set(state => ({
         nodes: state.nodes.map(n => {
           if (n.id === id) {
-            // THE FIX IS HERE: Ensure the label is always a string by falling back to the existing label.
-            // This satisfies TypeScript and fixes the refresh bugs.
-            const mergedData = { 
-              ...n.data, 
-              ...updatedNodeFromServer, 
-              label: updatedNodeFromServer.name || n.data.label 
+            const mergedData = {
+              ...n.data,
+              ...updatedNodeFromServer,
+              label: updatedNodeFromServer.name || n.data.label
             };
             return { ...n, data: mergedData };
           }
@@ -243,9 +260,9 @@ export const useStore = create<AppState>((set, get) => ({
     });
 
     const newSolution = await apiCall;
-    if (!newSolution) return; // Guard against failed API call
+    if (!newSolution) return;
 
-    const newNode: Node = {
+    const newNode: Node<TypedSolution> = {
         id: newSolution.id,
         type: 'default',
         position: { x: newSolution.x_position, y: newSolution.y_position },
@@ -267,16 +284,14 @@ export const useStore = create<AppState>((set, get) => ({
   linkEvidenceToOpportunity: async (evidenceId: string, opportunityId: string) => {
     const { nodes } = get();
     const opportunityNode = nodes.find(n => n.id === opportunityId);
-    // Use a type guard to ensure we're working with an opportunity
     if (!opportunityNode || opportunityNode.data.type !== 'opportunity') return;
 
     const currentEvidences = opportunityNode.data.evidences || [];
     const currentEvidenceIds = currentEvidences.map((e) => e.id);
     if (currentEvidenceIds.includes(evidenceId)) return;
-    
+
     const newEvidenceIds = [...currentEvidenceIds, evidenceId];
-    
-    // Explicitly cast the update object to the correct type
+
     const updatePayload: Partial<TypedOpportunity> = { evidenceIds: newEvidenceIds };
 
     await toast.promise(api.updateNode('opportunity', opportunityId, updatePayload), {
@@ -285,14 +300,12 @@ export const useStore = create<AppState>((set, get) => ({
         error: 'Failed to link evidence.',
     });
 
-    // Refresh the canvas data to show the newly linked evidence
     await get().getCanvasData();
   },
 
   createOpportunityOnDrop: async (sourceNode, position) => {
     const { nodes } = get();
     const children = nodes.filter(n => {
-        // Use a type guard to safely access properties
         if (n.data.type === 'opportunity') {
             return n.data.parentId === sourceNode.id || n.data.outcomeId === sourceNode.id;
         }
@@ -302,12 +315,11 @@ export const useStore = create<AppState>((set, get) => ({
         x: sourceNode.position.x + children.length * (NODE_WIDTH + HORIZONTAL_SPACING),
         y: sourceNode.position.y + VERTICAL_SPACING,
     };
-    
+
     const newNodeData = {
       name: 'New Opportunity',
       x_position: newPosition.x,
       y_position: newPosition.y,
-      // Use type guards to safely access properties
       outcomeId: sourceNode.data.type === 'outcome' ? sourceNode.id : (sourceNode.data as TypedOpportunity).outcomeId,
       parentId: sourceNode.data.type === 'opportunity' ? sourceNode.id : null,
     };
@@ -320,11 +332,18 @@ export const useStore = create<AppState>((set, get) => ({
 
     if (!createdNode) return;
 
+    const finalNodeData: TypedOpportunity = {
+        ...(createdNode as Opportunity),
+        type: 'opportunity',
+        label: createdNode.name,
+        evidences: [],
+    };
+
     const newNode: Node<NodeData> = {
         id: createdNode.id,
         type: 'default',
         position,
-        data: { ...createdNode, label: createdNode.name, type: 'opportunity' } as NodeData,
+        data: finalNodeData,
     };
     const newEdge: Edge = {
         id: `e-${sourceNode.id}-${newNode.id}`,
@@ -332,7 +351,7 @@ export const useStore = create<AppState>((set, get) => ({
         target: newNode.id,
         animated: true,
     };
-    set(state => ({ 
+    set(state => ({
         nodes: [...state.nodes, newNode],
         edges: [...state.edges, newEdge],
     }));

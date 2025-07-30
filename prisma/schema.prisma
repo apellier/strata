@@ -97,6 +97,7 @@ model Opportunity {
   riceEffort         Float?
   riceScore          Float?
   status             WorkflowStatus @default(BACKLOG)
+  blockerReason     String?
   solutionCandidates Json?
   outcome            Outcome?      @relation(fields: [outcomeId], references: [id], onDelete: SetNull)
   parent             Opportunity?  @relation("OpportunityToOpportunity", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -123,6 +124,7 @@ model Solution {
   opportunity   Opportunity  @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
   assumptions   Assumption[]
   status        WorkflowStatus @default(BACKLOG)
+  blockerReason String?
   userId        String
   user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 

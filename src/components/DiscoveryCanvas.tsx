@@ -1,3 +1,4 @@
+// src/components/DiscoveryCanvas.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -15,11 +16,10 @@ import ReactFlow, {
   OnNodesDelete,
   OnConnectStart,
   OnConnectEnd,
-  NodePositionChange,
-  XYPosition
+  applyNodeChanges,
+  NodePositionChange
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { cloneDeep } from 'lodash';
 
 import SidePanel, { PanelState } from './SidePanel';
 import CustomNode from './CustomNode';
@@ -27,21 +27,38 @@ import { useStore, NodeData } from '@/lib/store';
 import type { Opportunity, Solution, Outcome } from '@prisma/client';
 
 // Helper to get edge styles based on target node status
-const getEdgeStyles = (sourceNode?: Node<NodeData>, targetNode?: Node<NodeData>) => {
-    // Default style
-    let style = { stroke: '#b1b1b7', strokeWidth: 2 };
+const getEdgeStyles = (targetNode?: Node<NodeData>) => {
+    let style: React.CSSProperties = { stroke: '#b1b1b7', strokeWidth: 2 };
+    let animated = false;
+    let strokeDasharray: string | undefined;
 
     if (targetNode?.data?.type === 'opportunity' || targetNode?.data?.type === 'solution') {
         switch (targetNode.data.status) {
-            case 'DISCOVERY': return { stroke: '#8b5cf6', strokeWidth: 2.5, animated: true };
-            case 'IN_PROGRESS': return { stroke: '#22c55e', strokeWidth: 2.5, animated: true };
-            case 'DONE': return { stroke: '#6b7280', strokeWidth: 2 };
-            case 'BLOCKED': return { stroke: '#ef4444', strokeWidth: 2.5, strokeDasharray: '5,5' };
+            case 'DISCOVERY':
+                style.stroke = '#8b5cf6';
+                style.strokeWidth = 2.5;
+                animated = true;
+                break;
+            case 'IN_PROGRESS':
+                style.stroke = '#22c55e';
+                style.strokeWidth = 2.5;
+                animated = true;
+                break;
+            case 'DONE':
+                style.stroke = '#6b7280';
+                break;
+            case 'BLOCKED':
+                style.stroke = '#ef4444';
+                style.strokeWidth = 2.5;
+                strokeDasharray = '5,5';
+                break;
             case 'BACKLOG':
-            default: return { stroke: '#b1b1b7', strokeWidth: 2, strokeDasharray: '5,5' };
+            default:
+                strokeDasharray = '5,5';
+                break;
         }
     }
-    return style;
+    return { style, animated, strokeDasharray };
 };
 
 // This new component contains all the logic and state that needs the React Flow context
@@ -63,16 +80,16 @@ const DiscoveryCanvasContent = ({
     const { getCanvasData, updateNodePosition, addNode, createOpportunityOnDrop } = useStore();
     const { nodes, edges, onNodesChange, onEdgesChange, onConnect } = useStore();
     const onNodesDeleteFromStore = useStore(state => state.onNodesDelete);
-    
-    const { screenToFlowPosition, getNode, fitView } = useReactFlow();
+
+    const { screenToFlowPosition, getNode, getNodes, fitView } = useReactFlow();
     const connectingNodeId = useRef<string | null>(null);
     const [isDraggingEvidence, setIsDraggingEvidence] = useState(false);
 
-    // --- State for Parent-Child Dragging ---
     const dragData = useRef<{
+        startPositions: Map<string, { x: number, y: number }>;
         draggedNodeId: string;
-        children: { id: string; position: XYPosition }[];
     } | null>(null);
+
 
     useEffect(() => {
         getCanvasData();
@@ -120,7 +137,7 @@ const DiscoveryCanvasContent = ({
         const allNodes = useStore.getState().nodes;
         const selectedNodes = allNodes.filter(n => n.selected);
         const parentNode = selectedNodes.length === 1 ? selectedNodes[0] : undefined;
-        
+
         if (type === 'opportunity' && parentNode && (parentNode.data.type === 'outcome' || parentNode.data.type === 'opportunity')) {
             addNode('opportunity', parentNode);
         } else {
@@ -128,102 +145,103 @@ const DiscoveryCanvasContent = ({
         }
     };
 
-        // --- Dynamic Edge Styling ---
         const styledEdges = useMemo(() => {
+            const currentNodes = getNodes();
             return edges.map(edge => {
-                const sourceNode = getNode(edge.source!);
-                const targetNode = getNode(edge.target!);
-                return {
-                    ...edge,
-                    ...getEdgeStyles(sourceNode, targetNode),
-                };
+                const targetNode = currentNodes.find(n => n.id === edge.target);
+                const { style, ...rest } = getEdgeStyles(targetNode);
+                return { ...edge, style, ...rest };
             });
-        }, [edges, nodes, getNode]); // Add getNode to dependency array
-    
-    
-        // --- Parent-Child Dragging Logic ---
-        const onNodeDragStart: NodeDragHandler = useCallback((_, node) => {
-            const childNodes = edges
-                .filter(edge => edge.source === node.id)
-                .map(edge => {
-                    const childNode = getNode(edge.target);
-                    return childNode ? { id: childNode.id, position: childNode.position } : null;
-                })
-                .filter(Boolean) as { id: string; position: XYPosition }[];
-    
-            if (childNodes.length > 0) {
-                dragData.current = {
-                    draggedNodeId: node.id,
-                    children: childNodes,
-                };
-            }
-        }, [edges, getNode]);
-    
-        const onNodeDrag: NodeDragHandler = useCallback((event, draggedNode) => {
-            if (!dragData.current || dragData.current.draggedNodeId !== draggedNode.id) {
+        }, [edges, nodes]);
+
+        const onNodeDragStart: NodeDragHandler = useCallback((event, node) => {
+            if (event.altKey) {
+                dragData.current = null;
                 return;
             }
-    
-            const parentStartPos = useStore.getState().nodes.find(n => n.id === draggedNode.id)?.position;
+
+            const allNodes = getNodes();
+            const allEdges = useStore.getState().edges;
+            const descendants = new Map<string, Node>();
+            const queue: string[] = [node.id];
+
+            while (queue.length > 0) {
+                const currentId = queue.shift()!;
+                const children = allEdges.filter(e => e.source === currentId).map(e => e.target);
+                for (const childId of children) {
+                    if (!descendants.has(childId)) {
+                        const childNode = allNodes.find(n => n.id === childId);
+                        if (childNode) {
+                            descendants.set(childId, childNode);
+                            queue.push(childId);
+                        }
+                    }
+                }
+            }
+
+            const startPositions = new Map();
+            startPositions.set(node.id, { ...node.position });
+            descendants.forEach(desc => startPositions.set(desc.id, { ...desc.position }));
+
+            dragData.current = {
+                startPositions,
+                draggedNodeId: node.id
+            };
+        }, [getNodes, edges]);
+
+        const onNodeDrag: NodeDragHandler = useCallback((_, draggedNode) => {
+            if (!dragData.current) return;
+
+            const parentStartPos = dragData.current.startPositions.get(draggedNode.id);
             if (!parentStartPos) return;
-    
+
             const diff = {
                 x: draggedNode.position.x - parentStartPos.x,
                 y: draggedNode.position.y - parentStartPos.y,
             };
-    
-            const updatedNodes = useStore.getState().nodes.map(n => {
-                if (n.id === draggedNode.id) return { ...n, position: draggedNode.position };
-                
-                const childData = dragData.current?.children.find(c => c.id === n.id);
-                if (childData) {
-                    return {
-                        ...n,
-                        position: {
-                            x: childData.position.x + diff.x,
-                            y: childData.position.y + diff.y,
-                        },
-                    };
-                }
-                return n;
+
+            const changes: NodePositionChange[] = Array.from(dragData.current.startPositions.keys()).map(id => {
+                const startPos = dragData.current!.startPositions.get(id)!;
+                return {
+                    id,
+                    type: 'position', // <-- FIX: Explicitly set the type
+                    position: {
+                        x: startPos.x + diff.x,
+                        y: startPos.y + diff.y,
+                    },
+                };
             });
-    
-            useStore.setState({ nodes: updatedNodes });
-        }, []);
-    
+
+            onNodesChange(changes);
+        }, [onNodesChange]);
+
         const onNodeDragStop: NodeDragHandler = useCallback((_, node) => {
-            if (dragData.current) {
-                // Save parent position
-                updateNodePosition(node.id, node.data.type, node.position);
-                
-                // Save children positions
-                const parentStartPos = useStore.getState().nodes.find(n => n.id === node.id)?.position;
+             if (dragData.current) {
+                const parentStartPos = dragData.current.startPositions.get(node.id);
                 if (parentStartPos) {
                     const diff = {
                         x: node.position.x - parentStartPos.x,
                         y: node.position.y - parentStartPos.y,
                     };
-    
-                    dragData.current.children.forEach(child => {
-                        const childNode = getNode(child.id);
-                        if (childNode) {
+
+                    dragData.current.startPositions.forEach((startPos, id) => {
+                        const draggedNode = getNodes().find(n => n.id === id);
+                        if(draggedNode) {
                             const newPosition = {
-                                x: child.position.x + diff.x,
-                                y: child.position.y + diff.y,
+                                x: startPos.x + diff.x,
+                                y: startPos.y + diff.y,
                             };
-                            updateNodePosition(childNode.id, childNode.data.type, newPosition);
+                            updateNodePosition(id, draggedNode.data.type, newPosition);
                         }
                     });
                 }
             } else {
-                // Default behavior for nodes without children
                 updateNodePosition(node.id, node.data.type, node.position);
             }
             dragData.current = null;
-        }, [updateNodePosition, getNode]);
+        }, [updateNodePosition, getNodes]);
 
 
-    
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
@@ -289,7 +307,7 @@ const DiscoveryCanvasContent = ({
 
     return (
         <div className="w-full h-full flex">
-            <main 
+            <main
                 className="flex-1 relative"
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
@@ -303,6 +321,8 @@ const DiscoveryCanvasContent = ({
                     onConnectStart={onConnectStart}
                     onConnectEnd={onConnectEnd}
                     onNodeClick={onNodeClick}
+                    onNodeDragStart={onNodeDragStart}
+                    onNodeDrag={onNodeDrag}
                     onNodeDragStop={onNodeDragStop}
                     onNodesDelete={handleNodesDelete}
                     nodeTypes={useMemo(() => ({ default: CustomNode }), [])}

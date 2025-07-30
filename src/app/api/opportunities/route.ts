@@ -1,3 +1,4 @@
+// src/app/api/opportunities/route.ts
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
@@ -35,9 +36,8 @@ export async function GET() {
     try {
       const opportunities = await prisma.opportunity.findMany({
         where: { userId: user.id },
-        include: { 
+        include: {
             evidences: { include: { interview: true } },
-            // FIX: This is the corrected Prisma syntax for counting a relation
             _count: {
                 select: {
                     solutions: true
@@ -59,11 +59,24 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();
         const validatedData = createOpportunitySchema.parse(body);
+
+        // FIX: Initialize RICE score fields to prevent a score of 0 on creation.
+        const reach = 0;
+        const impact = 0.25;
+        const confidence = 80;
+        const effort = 1;
+        const riceScore = (reach * impact * (confidence / 100)) / effort;
+
         const newOpportunity = await prisma.opportunity.create({
           data: {
             ...validatedData,
             userId: user.id,
             description: { type: 'doc', content: [{ type: 'paragraph' }] },
+            riceReach: reach,
+            riceImpact: impact,
+            riceConfidence: confidence,
+            riceEffort: effort,
+            riceScore: riceScore,
           },
         });
         return NextResponse.json(newOpportunity, { status: 201 });
@@ -94,6 +107,8 @@ export async function PUT(req: Request) {
     }
 
     const validatedData = updateOpportunitySchema.parse(data);
+    
+    // Always recalculate RICE score if any of its components are present in the update
     if (
       validatedData.riceReach !== undefined ||
       validatedData.riceImpact !== undefined ||
@@ -103,7 +118,7 @@ export async function PUT(req: Request) {
       const reach = validatedData.riceReach ?? opportunity.riceReach ?? 0;
       const impact = validatedData.riceImpact ?? opportunity.riceImpact ?? 0;
       const confidence = validatedData.riceConfidence ?? opportunity.riceConfidence ?? 0;
-      const effort = validatedData.riceEffort ?? opportunity.riceEffort ?? 1; // Default to 1 to avoid division by zero
+      const effort = validatedData.riceEffort ?? opportunity.riceEffort ?? 1;
 
       if (effort > 0) {
         (validatedData as any).riceScore = (reach * impact * (confidence / 100)) / effort;
@@ -111,6 +126,7 @@ export async function PUT(req: Request) {
         (validatedData as any).riceScore = 0;
       }
     }
+
     if (validatedData.evidenceIds !== undefined) {
         (validatedData as any).evidences = {
             set: validatedData.evidenceIds.map((eid: string) => ({ id: eid }))
@@ -121,7 +137,8 @@ export async function PUT(req: Request) {
       where: { id },
       data: validatedData,
       include: {
-        evidences: { include: { interview: true } }
+        evidences: { include: { interview: true } },
+        _count: { select: { solutions: true } }
       }
     });
     return NextResponse.json(updatedOpportunity);

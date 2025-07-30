@@ -1,3 +1,4 @@
+// src/app/api/assumptions/route.ts
 import { NextResponse as NextResponseAssumption } from 'next/server';
 import prismaAssumption from '@/lib/db';
 import { z as zAssumption } from 'zod';
@@ -8,8 +9,15 @@ const assumptionSchema = zAssumption.object({
     type: zAssumption.enum(['DESIRABILITY', 'VIABILITY', 'FEASIBILITY', 'USABILITY', 'ETHICAL']).optional(),
     importance: zAssumption.number().int().min(1).max(10).optional(),
     evidence: zAssumption.number().int().min(1).max(10).optional(),
+    isValidated: zAssumption.boolean().optional(),
     solutionId: zAssumption.string().cuid(),
 });
+
+const createAssumptionSchema = zAssumption.object({
+  description: zAssumption.string().min(1),
+  solutionId: zAssumption.string().cuid(),
+});
+
 
 export async function POST(req: Request) {
   const { user, error } = await protectApiRoute();
@@ -17,9 +25,9 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const validatedData = assumptionSchema.pick({ description: true, solutionId: true }).parse(body);
+    // Use the more specific schema for creation
+    const validatedData = createAssumptionSchema.parse(body);
 
-    // Verify the user owns the solution they are adding an assumption to
     const solution = await prismaAssumption.solution.findFirst({
       where: { id: validatedData.solutionId, userId: user.id }
     });
@@ -27,8 +35,13 @@ export async function POST(req: Request) {
       return new NextResponseAssumption(JSON.stringify({ message: 'Solution not found or unauthorized' }), { status: 404 });
     }
 
-    const newAssumption = await prismaAssumption.assumption.create({ 
-      data: { ...validatedData, userId: user.id } 
+    // FIX: The validatedData now correctly ensures `description` is a string.
+    const newAssumption = await prismaAssumption.assumption.create({
+      data: {
+        description: validatedData.description,
+        solutionId: validatedData.solutionId,
+        userId: user.id
+      }
     });
     return NextResponseAssumption.json(newAssumption, { status: 201 });
   } catch (error) {
@@ -55,6 +68,7 @@ export async function PUT(req: Request) {
           return new NextResponseAssumption(JSON.stringify({ message: 'Assumption not found or unauthorized' }), { status: 404 });
         }
 
+        // Use the full schema for partial updates
         const validatedData = assumptionSchema.partial().parse(data);
         const updatedAssumption = await prismaAssumption.assumption.update({
             where: { id },
