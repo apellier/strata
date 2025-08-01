@@ -3,9 +3,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { useStore } from '@/lib/store';
-import { BookText, Target, Lightbulb, FlaskConical, X, CheckCircle } from 'lucide-react'; // Import X icon
-import type { Evidence, Interview , Opportunity, Solution, Outcome, Assumption} from '@prisma/client';
+import { useStore, NodeData, TypedOpportunity, TypedSolution, TypedOutcome } from '@/lib/store';
+import { BookText, Target, Lightbulb, FlaskConical, X, CheckCircle } from 'lucide-react';
+import type { Evidence, Interview, Assumption, Experiment } from '@prisma/client';
 
 const EvidencePopover = ({ evidences, opportunityId, onClose }: { evidences: (Evidence & { interview: Interview })[], opportunityId: string, onClose: () => void }) => {
   const { updateNodeData } = useStore();
@@ -13,7 +13,6 @@ const EvidencePopover = ({ evidences, opportunityId, onClose }: { evidences: (Ev
 
   const handleUnlink = (evidenceIdToUnlink: string) => {
     const newEvidenceIds = linkedEvidenceIds.filter(id => id !== evidenceIdToUnlink);
-    // This call will now work correctly because of the store fix
     updateNodeData(opportunityId, 'opportunity', { evidenceIds: newEvidenceIds });
 };
   const evidenceColors: { [key: string]: string } = {
@@ -72,12 +71,12 @@ const getOutcomeStatusStyles = (status?: string) => {
 };
 
 
-export default function CustomNode({ id, data, selected }: NodeProps<any>) {
-  const { label, type, evidences = [], riceScore, solutions, status, _count } = data;
+export default function CustomNode({ id, data, selected }: NodeProps<NodeData>) {
+  const { label, type, status } = data;
   const [isEditing, setIsEditing] = useState(false);
   const [nodeLabel, setNodeLabel] = useState(label);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false); // <-- Restore state for visual feedback
+  const [isDragOver, setIsDragOver] = useState(false);
   const { updateNodeData, linkEvidenceToOpportunity, isDraggingEvidence } = useStore();
 
 
@@ -99,7 +98,7 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
       setIsEditing(false);
     }
   };
-
+  
   const handleEvidenceClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsPopoverOpen(!isPopoverOpen);
@@ -137,15 +136,17 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
   };
 
 
-  const nodeStyle = typeStyles[type as keyof typeof typeStyles] || { border: 'border-t-gray-400', icon: null };
+  const nodeStyle = typeStyles[type];
   const workflowStatusStyles = getStatusStyles(status);
   const outcomeStatusStyles = getOutcomeStatusStyles(data.status);
   const selectedStyle = selected ? 'ring-2 ring-blue-500' : 'shadow-md';
   const dragOverStyle = isDragOver ? 'ring-2 ring-green-500 ring-offset-2' : '';
-  const blockedStyle = status === 'BLOCKED' ? '!border-red-500 ring-2 ring-red-500' : '';
-  const validatedAssumptions = type === 'solution' ? data.assumptions?.filter((a: Assumption) => a.isValidated).length : 0;
-  const totalAssumptions = type === 'solution' ? data.assumptions?.length : 0;
-  const solutionCount = _count?.solutions ?? 0;
+
+  // FIX: Use type guards to safely access properties
+  const validatedAssumptions = type === 'solution' ? (data as TypedSolution).assumptions?.filter((a: Assumption) => a.isValidated).length : 0;
+  const totalAssumptions = type === 'solution' ? (data as TypedSolution).assumptions?.length : 0;
+  const solutionCount = type === 'opportunity' ? (data as TypedOpportunity)._count?.solutions ?? 0 : 0;
+  const evidences = type === 'opportunity' ? (data as TypedOpportunity).evidences : [];
 
   return (
     <div
@@ -157,7 +158,7 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
       onDrop={handleDrop}
     >
       {isPopoverOpen && <EvidencePopover evidences={evidences} opportunityId={id} onClose={() => setIsPopoverOpen(false)} />}
-
+      
       {data.type !== 'outcome' && (
         <Handle type="target" position={Position.Top} className="!bg-gray-300 !w-3 !h-3" />
       )}
@@ -165,7 +166,6 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
 <div className="p-4">
 <div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex items-center gap-2">
-                {/* FIX: Add colored status dot for Outcomes */}
                 {type === 'outcome' && <span className={`w-3 h-3 rounded-full ${outcomeStatusStyles.dot} mt-1 flex-shrink-0`}></span>}
                 {nodeStyle.icon}
                 {isEditing ? (
@@ -180,24 +180,23 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
                 </span>
               )}
           </div>
-
-          {/* --- NEW: Data-rich node content --- */}
+          
           <div className="space-y-2 pt-2 border-t border-gray-100">
-            {type === 'outcome' && data.targetMetric && (
+            {type === 'outcome' && (data as TypedOutcome).targetMetric && (
               <div>
                 <div className="flex justify-between text-xs font-medium text-gray-500">
                   <span>Progress</span>
-                  <span>{data.currentValue || 0} / {data.targetMetric}</span>
+                  <span>{(data as TypedOutcome).currentValue || 0} / {(data as TypedOutcome).targetMetric}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                  <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${((data.currentValue || 0) / (parseFloat(data.targetMetric) || 1)) * 100}%` }}></div>
+                  <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${(((data as TypedOutcome).currentValue || 0) / (parseFloat((data as TypedOutcome).targetMetric!) || 1)) * 100}%` }}></div>
                 </div>
               </div>
             )}
 
-            {type === 'opportunity' && data.riceScore !== null && data.riceScore !== undefined && (
+            {type === 'opportunity' && (data as TypedOpportunity).riceScore !== null && (data as TypedOpportunity).riceScore !== undefined && (
               <div className="text-sm text-gray-600">
-                RICE Score: <span className="font-bold text-blue-600">{Math.round(data.riceScore * 10) / 10}</span>
+                RICE Score: <span className="font-bold text-blue-600">{Math.round((data as TypedOpportunity).riceScore! * 10) / 10}</span>
               </div>
             )}
 
@@ -209,10 +208,9 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
             )}
           </div>
       </div>
-
+      
       <Handle type="source" position={Position.Bottom} className="!bg-gray-300 !w-3 !h-3" />
-
-      {/* --- NEW: Solution Count on Opportunity Node --- */}
+      
       {type === 'opportunity' && solutionCount > 0 && (
         <div className="absolute -bottom-3 -left-3 bg-white border-2 border-gray-300 rounded-full h-7 w-7 flex items-center justify-center text-xs font-semibold text-gray-600" title={`${solutionCount} solution(s)`}>
           <FlaskConical size={14} />
@@ -220,10 +218,10 @@ export default function CustomNode({ id, data, selected }: NodeProps<any>) {
         </div>
       )}
 
-      {type === 'opportunity' && evidences?.length > 0 && (
-        <button onClick={handleEvidenceClick} className="absolute -top-3 -right-3 bg-white border-2 border-gray-300 rounded-full h-7 w-7 flex items-center justify-center text-xs font-semibold text-gray-600 hover:bg-gray-100 hover:border-blue-500" title={`${data.evidences.length} piece(s) of evidence linked`}>
+      {evidences && evidences.length > 0 && (
+        <button onClick={handleEvidenceClick} className="absolute -top-3 -right-3 bg-white border-2 border-gray-300 rounded-full h-7 w-7 flex items-center justify-center text-xs font-semibold text-gray-600 hover:bg-gray-100 hover:border-blue-500" title={`${evidences.length} piece(s) of evidence linked`}>
           <BookText size={14} />
-          <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center">{data.evidences.length}</span>
+          <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] rounded-full h-4 w-4 flex items-center justify-center">{evidences.length}</span>
         </button>
       )}
     </div>

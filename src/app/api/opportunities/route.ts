@@ -1,9 +1,8 @@
-// src/app/api/opportunities/route.ts
-
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { z } from 'zod';
 import { protectApiRoute } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
 
 const createOpportunitySchema = z.object({
   name: z.string().min(1, { message: "Name cannot be empty." }),
@@ -21,6 +20,7 @@ const updateOpportunitySchema = z.object({
   riceConfidence: z.number().optional().nullable(),
   riceEffort: z.number().optional().nullable(),
   status: z.enum(['BACKLOG', 'DISCOVERY', 'IN_PROGRESS', 'DONE', 'BLOCKED']).optional(),
+  blockerReason: z.string().optional().nullable(),
   solutionCandidates: z.any().optional(),
   evidenceIds: z.array(z.string().cuid()).optional(),
   outcomeId: z.string().cuid().optional().nullable(),
@@ -60,7 +60,6 @@ export async function POST(req: Request) {
         const body = await req.json();
         const validatedData = createOpportunitySchema.parse(body);
 
-        // FIX: Initialize RICE score fields to prevent a score of 0 on creation.
         const reach = 0;
         const impact = 0.25;
         const confidence = 80;
@@ -108,7 +107,9 @@ export async function PUT(req: Request) {
 
     const validatedData = updateOpportunitySchema.parse(data);
     
-    // Always recalculate RICE score if any of its components are present in the update
+    // FIX: Use a broader type initially to handle the temporary `evidenceIds` field
+    const updatePayload: Partial<Prisma.OpportunityUpdateInput> & { evidenceIds?: string[] } = { ...validatedData };
+    
     if (
       validatedData.riceReach !== undefined ||
       validatedData.riceImpact !== undefined ||
@@ -121,21 +122,21 @@ export async function PUT(req: Request) {
       const effort = validatedData.riceEffort ?? opportunity.riceEffort ?? 1;
 
       if (effort > 0) {
-        (validatedData as any).riceScore = (reach * impact * (confidence / 100)) / effort;
+        updatePayload.riceScore = (reach * impact * (confidence / 100)) / effort;
       } else {
-        (validatedData as any).riceScore = 0;
+        updatePayload.riceScore = 0;
       }
     }
 
     if (validatedData.evidenceIds !== undefined) {
-        (validatedData as any).evidences = {
+        updatePayload.evidences = {
             set: validatedData.evidenceIds.map((eid: string) => ({ id: eid }))
         };
-        delete validatedData.evidenceIds;
+        delete updatePayload.evidenceIds; // Remove the temporary field
     }
     const updatedOpportunity = await prisma.opportunity.update({
       where: { id },
-      data: validatedData,
+      data: updatePayload,
       include: {
         evidences: { include: { interview: true } },
         _count: { select: { solutions: true } }

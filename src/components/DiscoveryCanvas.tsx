@@ -1,4 +1,3 @@
-// src/components/DiscoveryCanvas.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -11,12 +10,10 @@ import ReactFlow, {
   OnEdgesChange,
   OnConnect,
   Node,
-  Edge,
   NodeDragHandler,
   OnNodesDelete,
   OnConnectStart,
   OnConnectEnd,
-  applyNodeChanges,
   NodePositionChange
 } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -28,7 +25,7 @@ import type { Opportunity, Solution, Outcome } from '@prisma/client';
 
 // Helper to get edge styles based on target node status
 const getEdgeStyles = (targetNode?: Node<NodeData>) => {
-    let style: React.CSSProperties = { stroke: '#b1b1b7', strokeWidth: 2 };
+    const style: React.CSSProperties = { stroke: '#b1b1b7', strokeWidth: 2 };
     let animated = false;
     let strokeDasharray: string | undefined;
 
@@ -152,7 +149,7 @@ const DiscoveryCanvasContent = ({
                 const { style, ...rest } = getEdgeStyles(targetNode);
                 return { ...edge, style, ...rest };
             });
-        }, [edges, nodes]);
+        }, [edges, nodes, getNodes]);
 
         const onNodeDragStart: NodeDragHandler = useCallback((event, node) => {
             if (event.altKey) {
@@ -204,7 +201,7 @@ const DiscoveryCanvasContent = ({
                 const startPos = dragData.current!.startPositions.get(id)!;
                 return {
                     id,
-                    type: 'position', // <-- FIX: Explicitly set the type
+                    type: 'position',
                     position: {
                         x: startPos.x + diff.x,
                         y: startPos.y + diff.y,
@@ -275,7 +272,7 @@ const DiscoveryCanvasContent = ({
 
     const handleNodesDelete: OnNodesDelete = useCallback((deletedNodes) => {
         if (panelState.isOpen && panelState.mode === 'edit') {
-            const isPanelNodeDeleted = deletedNodes.some(node => node.id === (panelState as any).nodeId);
+            const isPanelNodeDeleted = deletedNodes.some(node => node.id === (panelState as { nodeId: string }).nodeId);
             if (isPanelNodeDeleted) {
                 setPanelState({ isOpen: false });
             }
@@ -335,7 +332,7 @@ const DiscoveryCanvasContent = ({
                 {nodes.length === 0 && (
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-gray-400 pointer-events-none">
                         <h3 className="text-lg font-semibold">Canvas is Empty</h3>
-                        <p>Click "+ New Outcome" or press 'u' to start.</p>
+                        <p>Click &quot;+ New Outcome&quot; or press &apos;u&apos; to start.</p>
                     </div>
                 )}
                 <div className="absolute top-4 left-4 z-10 flex space-x-2">
@@ -355,7 +352,14 @@ const DiscoveryCanvasContent = ({
 };
 
 // The main export is now a clean wrapper that only provides the context
-export default function DiscoveryCanvas(props: any) {
+export default function DiscoveryCanvas(props: {
+    focusedNodeId: string | null;
+    onFocusOpportunity: (opportunity: Opportunity) => void;
+    onFocusSolution: (solution: Solution) => void;
+    onFocusOutcome: (outcome: Outcome) => void;
+    panelState: PanelState;
+    setPanelState: (state: PanelState) => void;
+}) {
     return (
         <ReactFlowProvider>
             <DiscoveryCanvasContent {...props} />

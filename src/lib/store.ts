@@ -2,21 +2,16 @@
 import { create } from 'zustand';
 import { Node, Edge, OnNodesChange, OnEdgesChange, applyNodeChanges, applyEdgeChanges, Connection } from 'reactflow';
 import * as api from './api';
-import type { Outcome, Opportunity, Solution, Evidence, Interview } from '@prisma/client';
+import type { Outcome, Opportunity, Solution, Evidence, Interview, Assumption, Experiment } from '@prisma/client';
 import toast from 'react-hot-toast';
 
-// --- Create Discriminated Union Types ---
 type NodeType = 'outcome' | 'opportunity' | 'solution';
 
-// 1. Extend the Prisma types with properties needed for UI logic
-// Add 'evidenceIds' as an optional property for API calls
 export type TypedOutcome = Outcome & { type: 'outcome'; label: string; };
-export type TypedOpportunity = Opportunity & { type: 'opportunity'; label: string; evidences: (Evidence & { interview: Interview })[]; evidenceIds?: string[] };
-export type TypedSolution = Solution & { type: 'solution'; label: string; };
+export type TypedOpportunity = Opportunity & { type: 'opportunity'; label: string; evidences: (Evidence & { interview: Interview })[]; evidenceIds?: string[]; _count?: { solutions: number } };
+export type TypedSolution = Solution & { type: 'solution'; label: string; assumptions: (Assumption & { experiments: Experiment[] })[] };
 
-// 2. Create the NodeData union from our new, specific types
 export type NodeData = TypedOutcome | TypedOpportunity | TypedSolution;
-
 
 // Constants for a clean layout
 const NODE_WIDTH = 256;
@@ -266,7 +261,7 @@ export const useStore = create<AppState>((set, get) => ({
         id: newSolution.id,
         type: 'default',
         position: { x: newSolution.x_position, y: newSolution.y_position },
-        data: { ...newSolution, label: newSolution.name, type: 'solution' },
+        data: { ...newSolution, label: newSolution.name, type: 'solution', assumptions: [] },
     };
     const newEdge: Edge = {
         id: `e-${opportunity.id}-${newNode.id}`,

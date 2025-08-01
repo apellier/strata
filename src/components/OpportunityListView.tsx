@@ -1,9 +1,9 @@
+// src/components/OpportunityListView.tsx
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Opportunity, Outcome } from '@prisma/client';
 import { ArrowUpDown } from 'lucide-react';
-import { debounce } from 'lodash';
 
 type OpportunityWithDetails = Opportunity & {
     evidenceCount: number;
@@ -11,7 +11,7 @@ type OpportunityWithDetails = Opportunity & {
     riceScore?: number | null;
 };
 
-const SortableHeader = ({ children, column, sortConfig, onSort }: { children: React.ReactNode, column: string, sortConfig: any, onSort: any }) => {
+const SortableHeader = ({ children, column, sortConfig, onSort }: { children: React.ReactNode, column: string, sortConfig: { key: string; direction: string; }, onSort: (key: string) => void }) => {
     const isSorted = sortConfig.key === column;
     const direction = isSorted ? (sortConfig.direction === 'ascending' ? '↑' : '↓') : '';
     return (
@@ -23,26 +23,6 @@ const SortableHeader = ({ children, column, sortConfig, onSort }: { children: Re
     );
 };
 
-const EditableCell = ({ value, onUpdate }: { value: number | null, onUpdate: (newValue: number) => void }) => {
-    const [localValue, setLocalValue] = useState(value || '');
-    const debouncedUpdate = useCallback(debounce(onUpdate, 800), [onUpdate]);
-    useEffect(() => {
-        setLocalValue(value || '');
-    }, [value]);
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setLocalValue(e.target.value);
-        debouncedUpdate(parseFloat(e.target.value));
-    };
-    return (
-        <input
-            type="number"
-            value={localValue}
-            onChange={handleChange}
-            className="w-20 text-center p-1 rounded bg-transparent hover:bg-gray-100 hover:border-gray-300 border border-transparent"
-        />
-    );
-};
-
 export default function OpportunityListView({ onFocusNode, viewMode }: { onFocusNode: (nodeId: string) => void, viewMode: 'canvas' | 'list' }) {
     const [opportunities, setOpportunities] = useState<OpportunityWithDetails[]>([]);
     const [outcomes, setOutcomes] = useState<Outcome[]>([]);
@@ -50,6 +30,7 @@ export default function OpportunityListView({ onFocusNode, viewMode }: { onFocus
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' }>({ key: 'riceScore', direction: 'descending' });
     const [outcomeFilter, setOutcomeFilter] = useState<string>('all');
     const [error, setError] = useState<string | null>(null);
+    
     const fetchData = async () => {
         setLoading(true);
         setError(null);
@@ -62,8 +43,8 @@ export default function OpportunityListView({ onFocusNode, viewMode }: { onFocus
             const outData = await outRes.json();
             setOpportunities(oppData);
             setOutcomes(outData);
-        } catch (error) {
-            console.error("Failed to fetch data for list view:", error);
+        } catch (err) {
+            console.error("Failed to fetch data for list view:", err);
             setError("Could not load opportunities. Please try again later.");
         } finally {
             setLoading(false);
@@ -71,7 +52,6 @@ export default function OpportunityListView({ onFocusNode, viewMode }: { onFocus
     };
 
     useEffect(() => {
-        // Refetch data whenever this view becomes active
         if (viewMode === 'list') {
             fetchData();
         }
@@ -83,15 +63,6 @@ export default function OpportunityListView({ onFocusNode, viewMode }: { onFocus
             direction = 'descending';
         }
         setSortConfig({ key, direction });
-    };
-
-    const handleInlineUpdate = async (id: string, field: 'priorityScore' | 'confidence', value: number) => {
-        setOpportunities(prev => prev.map(opp => opp.id === id ? { ...opp, [field]: value } : opp));
-        await fetch('/api/opportunities/inline-update', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, field, value }),
-        });
     };
 
     const sortedAndFilteredOpportunities = useMemo(() => {
@@ -125,7 +96,7 @@ export default function OpportunityListView({ onFocusNode, viewMode }: { onFocus
                 </div>
             </div>
             <div className="flex-grow overflow-y-auto border rounded-lg">
-                <table className="w-full text-sm table-fixed"> {/* Use table-fixed for better column control */}
+                <table className="w-full text-sm table-fixed">
                     <thead className="bg-[var(--background-alt)]">
                         <tr className="border-b border-[var(--border)]">
                             <th className="w-2/5 p-3 text-left"><SortableHeader column="name" sortConfig={sortConfig} onSort={handleSort}>Name</SortableHeader></th>
@@ -140,7 +111,6 @@ export default function OpportunityListView({ onFocusNode, viewMode }: { onFocus
                                 <td className="p-3 font-medium truncate">
                                     <button onClick={() => onFocusNode(opp.id)} className="text-blue-600 hover:underline text-left">{opp.name}</button>
                                 </td>
-                                {/* FIX: Display the RICE score */}
                                 <td className="p-3 text-center font-semibold text-gray-700">
                                     {opp.riceScore !== null && opp.riceScore !== undefined ? (Math.round(opp.riceScore * 10) / 10) : 'N/A'}
                                 </td>
