@@ -9,12 +9,14 @@ import type { JSONContent } from '@tiptap/core'
 
 const RichTextEditor = dynamic(() => import('./RichTextEditor').then(mod => mod.RichTextEditor), { ssr: false, loading: () => <div className="p-4 text-center text-gray-400 border rounded-lg min-h-[200px]">Loading Editor...</div> });
 
-const EditablePill = ({ label, value, onUpdate, placeholder, type = 'text', options }: { label: string, value: any, onUpdate: (newValue: any) => void, placeholder: string, type?: string, options?: string[] }) => {
+const EditablePill = ({ label, value, onUpdate, placeholder, type = 'text', options }: { label: string, value: string | number | null, onUpdate: (newValue: string | number) => void, placeholder: string, type?: string, options?: string[] }) => {
     const [localValue, setLocalValue] = useState(value);
     const [isEditing, setIsEditing] = useState(false);
     const handleBlur = () => {
         setIsEditing(false);
-        if (value !== localValue) onUpdate(localValue);
+        if (value !== localValue && localValue !== null) {
+            onUpdate(localValue);
+        }
     };
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') handleBlur();
@@ -51,13 +53,13 @@ const EditablePill = ({ label, value, onUpdate, placeholder, type = 'text', opti
 
 export default function OutcomeDetails({ nodeData }: { nodeData: TypedOutcome }) {
     const { updateNodeData } = useStore();
-    const debouncedUpdate = useCallback(debounce(updateNodeData, 1000), [updateNodeData]);
-    const handleFieldUpdate = (field: keyof TypedOutcome, value: any) => {
-        let finalValue = value;
-        if (field === 'currentValue') finalValue = parseFloat(value) || null;
+    const debouncedUpdate = useCallback(updateNodeData, [updateNodeData]);
+    const handleFieldUpdate = (field: keyof TypedOutcome, value: string | number) => {
+        let finalValue: string | number | null = value;
+        if (field === 'currentValue') finalValue = parseFloat(value as string) || null;
         debouncedUpdate(nodeData.id, 'outcome', { [field]: finalValue });
     };
-    const handleDescriptionChange = (newDescription: any) => {
+    const handleDescriptionChange = (newDescription: JSONContent) => {
         debouncedUpdate(nodeData.id, 'outcome', { description: newDescription });
     };
     return (

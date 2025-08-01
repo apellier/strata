@@ -19,7 +19,7 @@ async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T>
     try {
       const errorBody = await response.json();
       errorMessage = errorBody.message || errorMessage;
-    } catch (e: unknown) {}
+    } catch (e: unknown) { /* ignore */ }
     throw new Error(errorMessage);
   }
 

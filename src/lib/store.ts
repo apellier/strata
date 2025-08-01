@@ -258,11 +258,12 @@ export const useStore = create<AppState>((set, get) => ({
     if (!newSolution) return;
 
     const newNode: Node<TypedSolution> = {
-        id: newSolution.id,
-        type: 'default',
-        position: { x: newSolution.x_position, y: newSolution.y_position },
-        data: { ...newSolution, label: newSolution.name, type: 'solution', assumptions: [] },
-    };
+      id: newSolution.id,
+      type: 'default',
+      position: { x: newSolution.x_position, y: newSolution.y_position },
+      data: { ...(newSolution as Solution), label: newSolution.name, type: 'solution', assumptions: [] },
+  };
+
     const newEdge: Edge = {
         id: `e-${opportunity.id}-${newNode.id}`,
         source: opportunity.id,
@@ -328,11 +329,12 @@ export const useStore = create<AppState>((set, get) => ({
     if (!createdNode) return;
 
     const finalNodeData: TypedOpportunity = {
-        ...(createdNode as Opportunity),
-        type: 'opportunity',
-        label: createdNode.name,
-        evidences: [],
-    };
+      ...(createdNode as Opportunity),
+      type: 'opportunity',
+      label: createdNode.name,
+      evidences: [],
+      _count: { solutions: 0 } // <-- FIX: Initialize _count property
+  };
 
     const newNode: Node<NodeData> = {
         id: createdNode.id,

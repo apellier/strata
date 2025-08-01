@@ -8,7 +8,7 @@ import { Bold, Italic, Heading2, Heading3 } from 'lucide-react';
 
 const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
   if (!editor) return null;
-  const buttonClass = (type: string, options?: Record<string, any>) => `p-2 rounded transition-colors ${editor.isActive(type, options) ? 'bg-gray-200' : 'hover:bg-gray-100'}`;
+  const buttonClass = (type: string, options?: Record<string, unknown>) => `p-2 rounded transition-colors ${editor.isActive(type, options) ? 'bg-gray-200' : 'hover:bg-gray-100'}`;
   return (
     <div className="flex items-center gap-1 p-1 border-b border-gray-200 bg-gray-50 rounded-t-lg">
       <button onClick={() => editor.chain().focus().toggleBold().run()} className={buttonClass('bold')}><Bold className="w-4 h-4" /></button>

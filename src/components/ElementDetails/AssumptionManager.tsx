@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import type { Assumption, Experiment, Solution } from '@prisma/client';
-import { useStore } from '@/lib/store';
+import { useStore, TypedSolution } from '@/lib/store';
 import * as api from '@/lib/api';
 import { DebouncedInput, PropertyRow } from './ui';
 
@@ -57,7 +57,7 @@ const AssumptionMatrix = ({ assumptions }: { assumptions: Assumption[] }) => {
     );
 };
 
-export default function AssumptionManager({ solution }: { solution: Solution & { assumptions: (Assumption & { experiments: Experiment[] })[] } }) {
+export default function AssumptionManager({ solution }: { solution: TypedSolution }) {
     const { getCanvasData } = useStore();
     const [view, setView] = useState<'list' | 'matrix'>('list');
     const assumptions = solution.assumptions || [];
@@ -90,12 +90,12 @@ export default function AssumptionManager({ solution }: { solution: Solution & {
                         <div key={a.id} className="p-3 bg-gray-100 rounded-lg space-y-2 group">
                             <DebouncedInput value={a.description} onChange={val => handleApiCall(api.updateAssumption(a.id, { description: val }))} type="textarea" />
                             <div className="flex items-center space-x-4">
-                                <select value={a.type || 'DESIRABILITY'} onChange={e => handleApiCall(api.updateAssumption(a.id, { type: e.target.value as any }))} className="text-xs p-1 rounded border-gray-300 bg-white">
+                            <select value={a.type} onChange={e => handleApiCall(api.updateAssumption(a.id, { type: e.target.value as Assumption['type'] }))} className="text-xs p-1 rounded border-gray-300 bg-white">
                                     <option>DESIRABILITY</option><option>VIABILITY</option><option>FEASIBILITY</option><option>USABILITY</option><option>ETHICAL</option>
                                 </select>
                                 <div className="flex-grow" />
-                                <label className="text-xs flex items-center gap-1">Imp: <DebouncedInput type="number" value={a.importance} onChange={val => handleApiCall(api.updateAssumption(a.id, { importance: parseInt(val) }))} className="!w-12 !p-1" /></label>
-                                <label className="text-xs flex items-center gap-1">Evi: <DebouncedInput type="number" value={a.evidence} onChange={val => handleApiCall(api.updateAssumption(a.id, { evidence: parseInt(val) }))} className="!w-12 !p-1" /></label>
+                                <label className="text-xs flex items-center gap-1">Imp: <DebouncedInput type="number" value={a.importance} onChange={(val: string) => handleApiCall(api.updateAssumption(a.id, { importance: parseInt(val, 10) }))} className="!w-12 !p-1" /></label>
+                                <label className="text-xs flex items-center gap-1">Evi: <DebouncedInput type="number" value={a.evidence} onChange={(val: string) => handleApiCall(api.updateAssumption(a.id, { evidence: parseInt(val, 10) }))} className="!w-12 !p-1" /></label>
                                 <button onClick={() => handleApiCall(api.deleteAssumption(a.id))} className="text-red-500 opacity-0 group-hover:opacity-100">×</button>
                             </div>
 

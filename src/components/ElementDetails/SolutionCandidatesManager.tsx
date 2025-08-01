@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { Opportunity } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { useStore, TypedOpportunity } from '@/lib/store';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
@@ -80,9 +80,10 @@ export default function SolutionCandidatesManager({ opportunity }: { opportunity
         ? (opportunity.solutionCandidates as unknown as SolutionCandidate[])
         : [];
 
-    const handleUpdateCandidates = (updatedCandidates: SolutionCandidate[]) => {
-        updateNodeData(opportunity.id, 'opportunity', { solutionCandidates: updatedCandidates as any });
-    };
+        const handleUpdateCandidates = (updatedCandidates: SolutionCandidate[]) => {
+            updateNodeData(opportunity.id, 'opportunity', { solutionCandidates: updatedCandidates as unknown as Prisma.JsonValue });
+        };
+    
 
     const handleAddCandidate = () => {
         if (newCandidateTitle.trim()) {

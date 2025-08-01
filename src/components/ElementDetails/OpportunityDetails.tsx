@@ -23,10 +23,9 @@ export default function OpportunityDetails({ nodeData }: { nodeData: TypedOpport
         updateNodeData(nodeData.id, 'opportunity', data);
     }, [nodeData.id, updateNodeData]);
 
-
-    const debouncedDescriptionUpdate = useCallback(debounce((newDescription: any) => {
+    const debouncedDescriptionUpdate = useCallback((newDescription: JSONContent) => {
         updateNodeData(nodeData.id, 'opportunity', { description: newDescription });
-    }, 1000), [nodeData.id, updateNodeData]);
+    }, [nodeData.id, updateNodeData]);
 
 
     return (

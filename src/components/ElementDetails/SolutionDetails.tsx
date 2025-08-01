@@ -18,9 +18,9 @@ export default function SolutionDetails({ nodeData }: { nodeData: TypedSolution 
     const handleUpdate = useCallback((data: Partial<TypedSolution>) => {
         updateNodeData(nodeData.id, 'solution', data);
     }, [nodeData.id, updateNodeData]);
-    const debouncedDescriptionUpdate = useCallback(debounce((newDescription: any) => {
+    const debouncedDescriptionUpdate = useCallback((newDescription: JSONContent) => {
         handleUpdate({ description: newDescription });
-    }, 1000), [handleUpdate]);
+    }, [handleUpdate]);
     return (
         <div className="space-y-6">
             <PropertyRow label="Status">

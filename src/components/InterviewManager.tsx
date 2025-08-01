@@ -10,6 +10,7 @@ import { useStore } from '@/lib/store'; // <-- Import the store
 
 const EvidenceCard = ({ evidence }: { evidence: Evidence }) => {
     const { setIsDraggingEvidence } = useStore();
+
     const evidenceColors: { [key: string]: string } = {
         VERBATIM: 'border-blue-400 bg-blue-50',
         PAIN_POINT: 'border-red-400 bg-red-50',
@@ -21,9 +22,8 @@ const EvidenceCard = ({ evidence }: { evidence: Evidence }) => {
         e.dataTransfer.setData('application/json', JSON.stringify(evidence));
         e.dataTransfer.effectAllowed = 'move';
     };
-
     return (
-        <div draggable onDragStart={handleDragStart} onDragEnd={() => setIsDraggingEvidence(false)} className={`p-2 rounded-md border-l-4 shadow-sm cursor-grab active:cursor-grabbing ${evidenceColors[evidence.type]}`}>
+        <div draggable onDragStart={handleDragStart} className={`p-2 rounded-md border-l-4 shadow-sm cursor-grab active:cursor-grabbing ${evidenceColors[evidence.type]}`}>
             <p className="italic text-sm text-gray-700">"{evidence.content}"</p>
         </div>
     );

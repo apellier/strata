@@ -1,15 +1,14 @@
 'use client';
 
 import React from 'react';
-import { useStore, NodeData } from '@/lib/store';
 import { Maximize, Lightbulb, TestTube2, Target } from 'lucide-react';
 import * as api from '@/lib/api';
 import { DebouncedInput } from './ui';
 import OutcomeDetails from './OutcomeDetails';
 import OpportunityDetails from './OpportunityDetails';
 import SolutionDetails from './SolutionDetails';
-import ExperimentDashboard from './ExperimentDashboard';
-import type { Opportunity, Solution, Outcome } from '@prisma/client';
+import { useStore, NodeData, TypedOpportunity, TypedSolution, TypedOutcome } from '@/lib/store';
+
 
 export default function ElementDetails({ nodeData, onFocus, isFocusMode }: { nodeData: NodeData, onFocus: (node: NodeData) => void, isFocusMode: boolean }) {
     const { getCanvasData } = useStore();

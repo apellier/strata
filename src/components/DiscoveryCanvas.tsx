@@ -144,7 +144,7 @@ const DiscoveryCanvasContent = ({
                 const { style, ...rest } = getEdgeStyles(targetNode);
                 return { ...edge, style, ...rest };
             });
-        }, [edges, nodes, getNodes]);
+        }, [edges, getNodes]);
 
         const onNodeDragStart: NodeDragHandler = useCallback((event, node) => {
             if (event.altKey) {

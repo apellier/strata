@@ -71,8 +71,8 @@ export default function OpportunityListView({ onFocusNode, viewMode }: { onFocus
             items = items.filter(opp => opp.outcomeId === outcomeFilter);
         }
         items.sort((a, b) => {
-            const aValue = (a as any)[sortConfig.key] ?? -Infinity;
-            const bValue = (b as any)[sortConfig.key] ?? -Infinity;
+            const aValue = (a as Record<string, any>)[sortConfig.key] ?? -Infinity;
+            const bValue = (b as Record<string, any>)[sortConfig.key] ?? -Infinity;
             if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
             if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
             return 0;
