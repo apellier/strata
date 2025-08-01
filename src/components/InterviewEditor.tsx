@@ -147,7 +147,7 @@ const InterviewWorkspace = ({
                 <h3 className="text-lg font-semibold text-gray-800">Evidence</h3>
                 {interview.evidences.length > 0 ? interview.evidences.map(evidence => (
                     <div key={evidence.id} className={`p-3 bg-white rounded-lg border-l-4 shadow-sm group relative ${evidenceColors[evidence.type]}`}>
-                        <p className="italic text-gray-700">"{evidence.content}"</p>
+                        <p className="italic text-gray-700">&quot;{evidence.content}&quot;</p>
                         <button onClick={() => onDeleteEvidence(evidence.id)} className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 text-lg font-bold">×</button>
                     </div>
                 )) : (

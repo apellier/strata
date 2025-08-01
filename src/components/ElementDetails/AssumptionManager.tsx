@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { Assumption, Experiment, Solution } from '@prisma/client';
+import type { Assumption, Experiment } from '@prisma/client';
 import { useStore, TypedSolution } from '@/lib/store';
 import * as api from '@/lib/api';
 import { DebouncedInput, PropertyRow } from './ui';

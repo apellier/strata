@@ -346,7 +346,16 @@ const DiscoveryCanvasContent = ({
     );
 };
 
-export default function DiscoveryCanvas(props: any) {
+interface DiscoveryCanvasProps {
+    focusedNodeId: string | null;
+    onFocusOpportunity: (opportunity: Opportunity) => void;
+    onFocusSolution: (solution: Solution) => void;
+    onFocusOutcome: (outcome: Outcome) => void;
+    panelState: PanelState;
+    setPanelState: (state: PanelState) => void;
+}
+
+export default function DiscoveryCanvas(props: DiscoveryCanvasProps) {
     return (
         <ReactFlowProvider>
             <DiscoveryCanvasContent {...props} />

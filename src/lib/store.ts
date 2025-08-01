@@ -176,12 +176,13 @@ export const useStore = create<AppState>((set, get) => ({
     if (!createdNode) return;
 
     const newNodeData: NodeData = {
-      ...(createdNode as any),
+      // Use a more specific type that covers all possibilities
+      ...(createdNode as Outcome | Opportunity | Solution),
       label: createdNode.name,
       type: type,
       // Ensure opportunity nodes have an empty evidences array on creation
       ...(type === 'opportunity' && { evidences: [] }),
-    };
+    } as NodeData; // Assert the final object matches the NodeData type
 
 
     const newNode: Node<NodeData> = {

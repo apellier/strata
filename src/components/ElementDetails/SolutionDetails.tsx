@@ -4,7 +4,6 @@
 import React, { useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useStore, TypedSolution } from '@/lib/store';
-import { debounce } from 'lodash';
 import AssumptionManager from './AssumptionManager';
 import { PropertyRow, DebouncedInput } from './ui';
 import { WorkflowStatus } from '@prisma/client';

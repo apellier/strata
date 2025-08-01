@@ -70,15 +70,24 @@ export default function OpportunityListView({ onFocusNode, viewMode }: { onFocus
         if (outcomeFilter !== 'all') {
             items = items.filter(opp => opp.outcomeId === outcomeFilter);
         }
+    
+        // Corrected sort logic without the extra nesting
         items.sort((a, b) => {
-            const aValue = (a as Record<string, any>)[sortConfig.key] ?? -Infinity;
-            const bValue = (b as Record<string, any>)[sortConfig.key] ?? -Infinity;
-            if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
-            if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+            const aValue = a[sortConfig.key as keyof OpportunityWithDetails] ?? -Infinity;
+            const bValue = b[sortConfig.key as keyof OpportunityWithDetails] ?? -Infinity;
+            
+            if (aValue < bValue) {
+                return sortConfig.direction === 'ascending' ? -1 : 1;
+            }
+            if (aValue > bValue) {
+                return sortConfig.direction === 'ascending' ? 1 : -1;
+            }
             return 0;
         });
+    
         return items;
     }, [opportunities, sortConfig, outcomeFilter]);
+    
 
     if (loading) return <div className="p-8 text-center text-gray-500">Loading opportunities...</div>;
     if (error) return <div className="p-8 text-center text-red-500">{error}</div>;

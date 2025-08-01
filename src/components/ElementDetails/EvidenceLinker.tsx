@@ -66,7 +66,7 @@ export default function EvidenceLinker({ opportunity }: { opportunity: Opportuni
                                 onClick={() => handleLink(e.id)} 
                                 className={`p-2 my-1 border-l-4 rounded-md cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${evidenceColors[e.type]} ${linkedEvidenceIds.includes(e.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                <p className="text-sm italic">"{e.content}"</p>
+                                <p className="text-sm italic">&quot;{e.content}&quot;</p>
                                 <p className="text-xs text-gray-500 mt-1">From: {e.interview.interviewee}</p>
                             </div>
                         )) : <p className="text-sm text-gray-400 text-center p-4">No matching evidence found.</p>}
@@ -77,7 +77,7 @@ export default function EvidenceLinker({ opportunity }: { opportunity: Opportuni
             <div className="space-y-2">
                 {(opportunity.evidences || []).map((ev) => (
                     <div key={ev.id} className={`p-2 rounded-md border-l-4 group relative ${evidenceColors[ev.type]}`}>
-                         <p className="text-sm italic">"{ev.content}"</p>
+                         <p className="text-sm italic">&quot;{ev.content}&quot;</p>
                          <button onClick={() => handleUnlink(ev.id)} className="absolute top-1 right-1 text-xs text-red-500 opacity-0 group-hover:opacity-100 hover:underline">Unlink</button>
                     </div>
                 ))}

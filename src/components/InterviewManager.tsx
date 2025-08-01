@@ -24,7 +24,7 @@ const EvidenceCard = ({ evidence }: { evidence: Evidence }) => {
     };
     return (
         <div draggable onDragStart={handleDragStart} className={`p-2 rounded-md border-l-4 shadow-sm cursor-grab active:cursor-grabbing ${evidenceColors[evidence.type]}`}>
-            <p className="italic text-sm text-gray-700">"{evidence.content}"</p>
+            <p className="italic text-sm text-gray-700">&quot;{evidence.content}&quot;</p>
         </div>
     );
 };

@@ -4,7 +4,6 @@
 import React, { useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useStore, TypedOpportunity } from '@/lib/store';
-import { debounce } from 'lodash';
 import SolutionCandidatesManager from './SolutionCandidatesManager';
 import EvidenceLinker from './EvidenceLinker';
 import RiceScoreCalculator from './RiceScoreCalculator';
