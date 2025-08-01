@@ -1,9 +1,9 @@
-import { NextResponse as NextResponseNext } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'; // Corrected import
 import prismaClient from '@/lib/db';
 import { protectApiRoute } from '@/lib/auth';
 
 export async function DELETE(
-  req: Request,
+  req: NextRequest, // Corrected type
   { params }: { params: { id: string } }
 ) {
   const { user, error } = await protectApiRoute();
@@ -11,7 +11,7 @@ export async function DELETE(
 
   const { id } = params;
   if (!id) {
-    return NextResponseNext.json({ message: 'Missing opportunity ID' }, { status: 400 });
+    return NextResponse.json({ message: 'Missing opportunity ID' }, { status: 400 });
   }
 
   try {
@@ -19,16 +19,16 @@ export async function DELETE(
       where: { id, userId: user.id }
     });
     if (!opportunity) {
-      return NextResponseNext.json({ message: 'Opportunity not found or unauthorized' }, { status: 404 });
+      return NextResponse.json({ message: 'Opportunity not found or unauthorized' }, { status: 404 });
     }
 
     await prismaClient.$transaction([
       prismaClient.opportunity.updateMany({ where: { parentId: id }, data: { parentId: null } }),
       prismaClient.opportunity.delete({ where: { id } })
     ]);
-    return new NextResponseNext(null, { status: 204 });
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error("Error deleting opportunity:", error);
-    return NextResponseNext.json({ message: 'Error deleting opportunity' }, { status: 500 });
+    return NextResponse.json({ message: 'Error deleting opportunity' }, { status: 500 });
   }
 }

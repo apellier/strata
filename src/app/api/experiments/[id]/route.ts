@@ -1,14 +1,13 @@
-
-import { NextResponse as NextResponseExperimentId } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'; // Corrected import
 import prismaExperimentId from '@/lib/db';
 import { protectApiRoute } from '@/lib/auth';
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) { // Corrected type
   const { user, error } = await protectApiRoute();
   if (error) return error;
 
   const { id } = params;
-  if (!id) return NextResponseExperimentId.json({ message: 'Missing experiment ID' }, { status: 400 });
+  if (!id) return NextResponse.json({ message: 'Missing experiment ID' }, { status: 400 });
 
   try {
     const experiment = await prismaExperimentId.experiment.findFirst({
@@ -16,13 +15,13 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     });
 
     if (!experiment) {
-      return new NextResponseExperimentId(JSON.stringify({ message: 'Experiment not found or unauthorized' }), { status: 404 });
+      return NextResponse.json({ message: 'Experiment not found or unauthorized' }, { status: 404 });
     }
 
     await prismaExperimentId.experiment.delete({ where: { id } });
-    return new NextResponseExperimentId(null, { status: 204 });
+    return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error("Error deleting experiment:", error);
-    return NextResponseExperimentId.json({ message: 'Error deleting experiment' }, { status: 500 });
+    return NextResponse.json({ message: 'Error deleting experiment' }, { status: 500 });
   }
 }
