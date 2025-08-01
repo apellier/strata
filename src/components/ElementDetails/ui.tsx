@@ -10,7 +10,7 @@ export const PropertyRow = ({ label, children }: { label: string, children: Reac
     </div>
 );
 
-export const DebouncedInput = ({ value, onChange, type = 'text', placeholder = '', className = '' }: { value: any, onChange: (val: any) => void, type?: string, placeholder?: string, className?: string }) => {
+export const DebouncedInput = ({ value, onChange, type = 'text', placeholder = '', className = '' }: { value: string | number | null, onChange: (val: string) => void, type?: string, placeholder?: string, className?: string }) => {
     const [localValue, setLocalValue] = useState(value);
 
     useEffect(() => {

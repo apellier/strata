@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 type NodeType = 'outcome' | 'opportunity' | 'solution';
 
 export type TypedOutcome = Outcome & { type: 'outcome'; label: string; };
-export type TypedOpportunity = Opportunity & { type: 'opportunity'; label: string; evidences: (Evidence & { interview: Interview })[]; evidenceIds?: string[]; _count?: { solutions: number } };
+export type TypedOpportunity = Opportunity & { type: 'opportunity'; label: string; evidences: (Evidence & { interview: Interview })[]; evidenceIds?: string[], _count?: { solutions: number } };
 export type TypedSolution = Solution & { type: 'solution'; label: string; assumptions: (Assumption & { experiments: Experiment[] })[] };
 
 export type NodeData = TypedOutcome | TypedOpportunity | TypedSolution;
@@ -217,15 +217,15 @@ export const useStore = create<AppState>((set, get) => ({
     }
 
     try {
-      const updatedNodeFromServer = await api.updateNode(type, id, data);
-
+      const updatedNodeFromServer = await api.updateNode(type, id, data as Partial<NodeData>);
+      
       set(state => ({
         nodes: state.nodes.map(n => {
           if (n.id === id) {
-            const mergedData = {
-              ...n.data,
-              ...updatedNodeFromServer,
-              label: updatedNodeFromServer.name || n.data.label
+            const mergedData = { 
+              ...n.data, 
+              ...updatedNodeFromServer, 
+              label: updatedNodeFromServer.name || n.data.label 
             };
             return { ...n, data: mergedData };
           }

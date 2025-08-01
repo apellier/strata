@@ -1,14 +1,14 @@
 'use client';
 
 import React from 'react';
-import { useEditor, EditorContent, Editor } from '@tiptap/react';
+import { useEditor, EditorContent, Editor, JSONContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Bold, Italic, Heading2, Heading3 } from 'lucide-react';
 
 const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
   if (!editor) return null;
-  const buttonClass = (type: string, options?: any) => `p-2 rounded transition-colors ${editor.isActive(type, options) ? 'bg-gray-200' : 'hover:bg-gray-100'}`;
+  const buttonClass = (type: string, options?: Record<string, any>) => `p-2 rounded transition-colors ${editor.isActive(type, options) ? 'bg-gray-200' : 'hover:bg-gray-100'}`;
   return (
     <div className="flex items-center gap-1 p-1 border-b border-gray-200 bg-gray-50 rounded-t-lg">
       <button onClick={() => editor.chain().focus().toggleBold().run()} className={buttonClass('bold')}><Bold className="w-4 h-4" /></button>
@@ -19,7 +19,7 @@ const EditorToolbar = ({ editor }: { editor: Editor | null }) => {
   );
 };
 
-export const RichTextEditor = ({ content, onChange }: { content: any, onChange: (newContent: any) => void }) => {
+export const RichTextEditor = ({ content, onChange }: { content: JSONContent, onChange: (newContent: JSONContent) => void }) => {
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [

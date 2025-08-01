@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import type { Opportunity } from '@prisma/client';
-import { useStore } from '@/lib/store';
+import { useStore, TypedOpportunity } from '@/lib/store';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 // Define a specific type for a Solution Candidate object
@@ -72,7 +72,7 @@ const SolutionCandidateCard = ({ candidate, onUpdate, onRemove, onPromote }: { c
     );
 };
 
-export default function SolutionCandidatesManager({ opportunity }: { opportunity: Opportunity }) {
+export default function SolutionCandidatesManager({ opportunity }: { opportunity: TypedOpportunity }) {
     const { updateNodeData, promoteIdeaToSolution } = useStore();
     const [newCandidateTitle, setNewCandidateTitle] = useState('');
     
@@ -81,7 +81,6 @@ export default function SolutionCandidatesManager({ opportunity }: { opportunity
         : [];
 
     const handleUpdateCandidates = (updatedCandidates: SolutionCandidate[]) => {
-        // Cast the array to 'any' here to satisfy Prisma's JsonValue type
         updateNodeData(opportunity.id, 'opportunity', { solutionCandidates: updatedCandidates as any });
     };
 

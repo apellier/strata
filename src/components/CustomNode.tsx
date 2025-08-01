@@ -5,16 +5,16 @@ import React, { useState, useEffect } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { useStore, NodeData, TypedOpportunity, TypedSolution, TypedOutcome } from '@/lib/store';
 import { BookText, Target, Lightbulb, FlaskConical, X, CheckCircle } from 'lucide-react';
-import type { Evidence, Interview, Assumption, Experiment } from '@prisma/client';
+import type { Evidence, Interview, Assumption } from '@prisma/client';
 
 const EvidencePopover = ({ evidences, opportunityId, onClose }: { evidences: (Evidence & { interview: Interview })[], opportunityId: string, onClose: () => void }) => {
   const { updateNodeData } = useStore();
-  const linkedEvidenceIds = evidences.map(e => e.id);
 
   const handleUnlink = (evidenceIdToUnlink: string) => {
+    const linkedEvidenceIds = evidences.map(e => e.id);
     const newEvidenceIds = linkedEvidenceIds.filter(id => id !== evidenceIdToUnlink);
     updateNodeData(opportunityId, 'opportunity', { evidenceIds: newEvidenceIds });
-};
+  };
   const evidenceColors: { [key: string]: string } = {
         VERBATIM: 'border-blue-400',
         PAIN_POINT: 'border-red-400',
@@ -70,7 +70,6 @@ const getOutcomeStatusStyles = (status?: string) => {
   }
 };
 
-
 export default function CustomNode({ id, data, selected }: NodeProps<NodeData>) {
   const { label, type, status } = data;
   const [isEditing, setIsEditing] = useState(false);
@@ -78,7 +77,6 @@ export default function CustomNode({ id, data, selected }: NodeProps<NodeData>) 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const { updateNodeData, linkEvidenceToOpportunity, isDraggingEvidence } = useStore();
-
 
   useEffect(() => { setNodeLabel(label); }, [label]);
 
@@ -124,8 +122,11 @@ export default function CustomNode({ id, data, selected }: NodeProps<NodeData>) 
     e.preventDefault();
     setIsDragOver(false);
     if(type === 'opportunity') {
-        const ev = JSON.parse(e.dataTransfer.getData('application/json'));
-        linkEvidenceToOpportunity(ev.id, id);
+        const evData = e.dataTransfer.getData('application/json');
+        if (evData) {
+          const evidence = JSON.parse(evData);
+          linkEvidenceToOpportunity(evidence.id, id);
+        }
     }
   };
 
@@ -141,8 +142,7 @@ export default function CustomNode({ id, data, selected }: NodeProps<NodeData>) 
   const outcomeStatusStyles = getOutcomeStatusStyles(data.status);
   const selectedStyle = selected ? 'ring-2 ring-blue-500' : 'shadow-md';
   const dragOverStyle = isDragOver ? 'ring-2 ring-green-500 ring-offset-2' : '';
-
-  // FIX: Use type guards to safely access properties
+  
   const validatedAssumptions = type === 'solution' ? (data as TypedSolution).assumptions?.filter((a: Assumption) => a.isValidated).length : 0;
   const totalAssumptions = type === 'solution' ? (data as TypedSolution).assumptions?.length : 0;
   const solutionCount = type === 'opportunity' ? (data as TypedOpportunity)._count?.solutions ?? 0 : 0;
@@ -163,50 +163,50 @@ export default function CustomNode({ id, data, selected }: NodeProps<NodeData>) 
         <Handle type="target" position={Position.Top} className="!bg-gray-300 !w-3 !h-3" />
       )}
 
-<div className="p-4">
-<div className="flex items-start justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
-                {type === 'outcome' && <span className={`w-3 h-3 rounded-full ${outcomeStatusStyles.dot} mt-1 flex-shrink-0`}></span>}
-                {nodeStyle.icon}
-                {isEditing ? (
-                    <input type="text" value={nodeLabel} onChange={(e) => setNodeLabel(e.target.value)} onBlur={handleUpdate} onKeyDown={handleKeyDown} className="text-base font-semibold w-full bg-blue-50 border-blue-300 rounded p-1" autoFocus />
-                ) : (
-                    <div className="font-semibold text-gray-800 break-words">{label}</div>
-                )}
-              </div>
-              {status && type !== 'outcome' && (
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${workflowStatusStyles.bg} ${workflowStatusStyles.text}`}>
-                  {status.replace('_', ' ')}
-                </span>
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              {type === 'outcome' && <span className={`w-3 h-3 rounded-full ${outcomeStatusStyles.dot} mt-1 flex-shrink-0`}></span>}
+              {nodeStyle.icon}
+              {isEditing ? (
+                  <input type="text" value={nodeLabel} onChange={(e) => setNodeLabel(e.target.value)} onBlur={handleUpdate} onKeyDown={handleKeyDown} className="text-base font-semibold w-full bg-blue-50 border-blue-300 rounded p-1" autoFocus />
+              ) : (
+                  <div className="font-semibold text-gray-800 break-words">{label}</div>
               )}
-          </div>
-          
-          <div className="space-y-2 pt-2 border-t border-gray-100">
-            {type === 'outcome' && (data as TypedOutcome).targetMetric && (
-              <div>
-                <div className="flex justify-between text-xs font-medium text-gray-500">
-                  <span>Progress</span>
-                  <span>{(data as TypedOutcome).currentValue || 0} / {(data as TypedOutcome).targetMetric}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                  <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${(((data as TypedOutcome).currentValue || 0) / (parseFloat((data as TypedOutcome).targetMetric!) || 1)) * 100}%` }}></div>
-                </div>
-              </div>
+            </div>
+            {status && type !== 'outcome' && (
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${workflowStatusStyles.bg} ${workflowStatusStyles.text}`}>
+                {status.replace('_', ' ')}
+              </span>
             )}
+        </div>
+        
+        <div className="space-y-2 pt-2 border-t border-gray-100">
+          {type === 'outcome' && (data as TypedOutcome).targetMetric && (
+            <div>
+              <div className="flex justify-between text-xs font-medium text-gray-500">
+                <span>Progress</span>
+                <span>{(data as TypedOutcome).currentValue || 0} / {(data as TypedOutcome).targetMetric}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${(((data as TypedOutcome).currentValue || 0) / (parseFloat((data as TypedOutcome).targetMetric!) || 1)) * 100}%` }}></div>
+              </div>
+            </div>
+          )}
 
-            {type === 'opportunity' && (data as TypedOpportunity).riceScore !== null && (data as TypedOpportunity).riceScore !== undefined && (
-              <div className="text-sm text-gray-600">
-                RICE Score: <span className="font-bold text-blue-600">{Math.round((data as TypedOpportunity).riceScore! * 10) / 10}</span>
-              </div>
-            )}
+          {type === 'opportunity' && (data as TypedOpportunity).riceScore !== null && (data as TypedOpportunity).riceScore !== undefined && (
+            <div className="text-sm text-gray-600">
+              RICE Score: <span className="font-bold text-blue-600">{Math.round((data as TypedOpportunity).riceScore! * 10) / 10}</span>
+            </div>
+          )}
 
-            {type === 'solution' && totalAssumptions > 0 && (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <CheckCircle size={16} className="text-green-500" />
-                <span>{validatedAssumptions} / {totalAssumptions} Assumptions Validated</span>
-              </div>
-            )}
-          </div>
+          {type === 'solution' && totalAssumptions > 0 && (
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <CheckCircle size={16} className="text-green-500" />
+              <span>{validatedAssumptions} / {totalAssumptions} Assumptions Validated</span>
+            </div>
+          )}
+        </div>
       </div>
       
       <Handle type="source" position={Position.Bottom} className="!bg-gray-300 !w-3 !h-3" />

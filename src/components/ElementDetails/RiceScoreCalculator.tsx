@@ -5,15 +5,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { debounce } from 'lodash';
 import { DebouncedInput, PropertyRow } from './ui';
+import { TypedOpportunity } from '@/lib/store';
+
 
 interface RiceScoreCalculatorProps {
-  nodeData: {
-    riceReach?: number | null;
-    riceImpact?: number | null;
-    riceConfidence?: number | null;
-    riceEffort?: number | null;
-  };
-  onUpdate: (data: any) => void;
+    nodeData: Partial<TypedOpportunity>;
+    onUpdate: (data: Partial<TypedOpportunity>) => void;
 }
 
 export default function RiceScoreCalculator({ nodeData, onUpdate }: RiceScoreCalculatorProps) {

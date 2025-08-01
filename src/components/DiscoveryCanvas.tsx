@@ -6,9 +6,6 @@ import ReactFlow, {
   Background,
   useReactFlow,
   ReactFlowProvider,
-  OnNodesChange,
-  OnEdgesChange,
-  OnConnect,
   Node,
   NodeDragHandler,
   OnNodesDelete,
@@ -23,7 +20,6 @@ import CustomNode from './CustomNode';
 import { useStore, NodeData } from '@/lib/store';
 import type { Opportunity, Solution, Outcome } from '@prisma/client';
 
-// Helper to get edge styles based on target node status
 const getEdgeStyles = (targetNode?: Node<NodeData>) => {
     const style: React.CSSProperties = { stroke: '#b1b1b7', strokeWidth: 2 };
     let animated = false;
@@ -58,7 +54,6 @@ const getEdgeStyles = (targetNode?: Node<NodeData>) => {
     return { style, animated, strokeDasharray };
 };
 
-// This new component contains all the logic and state that needs the React Flow context
 const DiscoveryCanvasContent = ({
     focusedNodeId,
     onFocusOpportunity,
@@ -184,7 +179,7 @@ const DiscoveryCanvasContent = ({
                 startPositions,
                 draggedNodeId: node.id
             };
-        }, [getNodes, edges]);
+        }, [getNodes]);
 
         const onNodeDrag: NodeDragHandler = useCallback((_, draggedNode) => {
             if (!dragData.current) return;
@@ -351,15 +346,7 @@ const DiscoveryCanvasContent = ({
     );
 };
 
-// The main export is now a clean wrapper that only provides the context
-export default function DiscoveryCanvas(props: {
-    focusedNodeId: string | null;
-    onFocusOpportunity: (opportunity: Opportunity) => void;
-    onFocusSolution: (solution: Solution) => void;
-    onFocusOutcome: (outcome: Outcome) => void;
-    panelState: PanelState;
-    setPanelState: (state: PanelState) => void;
-}) {
+export default function DiscoveryCanvas(props: any) {
     return (
         <ReactFlowProvider>
             <DiscoveryCanvasContent {...props} />

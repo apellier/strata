@@ -107,8 +107,7 @@ export async function PUT(req: Request) {
 
     const validatedData = updateOpportunitySchema.parse(data);
     
-    // FIX: Use a broader type initially to handle the temporary `evidenceIds` field
-    const updatePayload: Partial<Prisma.OpportunityUpdateInput> & { evidenceIds?: string[] } = { ...validatedData };
+    const updatePayload: Prisma.OpportunityUpdateInput = { ...validatedData };
     
     if (
       validatedData.riceReach !== undefined ||
@@ -132,7 +131,6 @@ export async function PUT(req: Request) {
         updatePayload.evidences = {
             set: validatedData.evidenceIds.map((eid: string) => ({ id: eid }))
         };
-        delete updatePayload.evidenceIds; // Remove the temporary field
     }
     const updatedOpportunity = await prisma.opportunity.update({
       where: { id },
@@ -143,11 +141,11 @@ export async function PUT(req: Request) {
       }
     });
     return NextResponse.json(updatedOpportunity);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-        return new NextResponse(JSON.stringify({ message: 'Invalid input data', errors: error.issues }), { status: 400 });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+        return new NextResponse(JSON.stringify({ message: 'Invalid input data', errors: err.issues }), { status: 400 });
     }
-    console.error("Error updating opportunity:", error);
+    console.error("Error updating opportunity:", err);
     return new NextResponse(JSON.stringify({ message: 'Failed to update opportunity' }), { status: 500 });
   }
 }

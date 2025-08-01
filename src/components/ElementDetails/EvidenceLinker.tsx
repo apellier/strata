@@ -81,7 +81,7 @@ export default function EvidenceLinker({ opportunity }: { opportunity: Opportuni
                          <button onClick={() => handleUnlink(ev.id)} className="absolute top-1 right-1 text-xs text-red-500 opacity-0 group-hover:opacity-100 hover:underline">Unlink</button>
                     </div>
                 ))}
-                 {linkedEvidenceIds.length === 0 && !isAdding && <p className="text-xs text-gray-400 text-center py-4">No evidence linked yet. Click "+ Add" to link one.</p>}
+                 {linkedEvidenceIds.length === 0 && !isAdding && <p className="text-xs text-gray-400 text-center py-4">No evidence linked yet. Click &quot;+ Add&quot; to link one.</p>}
             </div>
         </div>
     );

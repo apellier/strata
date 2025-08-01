@@ -2,8 +2,10 @@
 
 import React, { useCallback, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { useStore } from '@/lib/store';
+import { useStore, TypedOutcome } from '@/lib/store';
 import { debounce } from 'lodash';
+import type { JSONContent } from '@tiptap/core'
+
 
 const RichTextEditor = dynamic(() => import('./RichTextEditor').then(mod => mod.RichTextEditor), { ssr: false, loading: () => <div className="p-4 text-center text-gray-400 border rounded-lg min-h-[200px]">Loading Editor...</div> });
 
@@ -47,10 +49,10 @@ const EditablePill = ({ label, value, onUpdate, placeholder, type = 'text', opti
     );
 };
 
-export default function OutcomeDetails({ nodeData }: { nodeData: any }) {
+export default function OutcomeDetails({ nodeData }: { nodeData: TypedOutcome }) {
     const { updateNodeData } = useStore();
-    const debouncedUpdate = useCallback(debounce(updateNodeData, 1000), []);
-    const handleFieldUpdate = (field: string, value: any) => {
+    const debouncedUpdate = useCallback(debounce(updateNodeData, 1000), [updateNodeData]);
+    const handleFieldUpdate = (field: keyof TypedOutcome, value: any) => {
         let finalValue = value;
         if (field === 'currentValue') finalValue = parseFloat(value) || null;
         debouncedUpdate(nodeData.id, 'outcome', { [field]: finalValue });
@@ -67,7 +69,11 @@ export default function OutcomeDetails({ nodeData }: { nodeData: any }) {
             </div>
             <div className="mt-4">
                 <h3 className="text-sm font-semibold text-gray-600 mb-2">Notes & Description</h3>
-                <RichTextEditor key={nodeData.id} content={nodeData.description} onChange={handleDescriptionChange} />
+                <RichTextEditor
+                    key={nodeData.id}
+                    content={nodeData.description && typeof nodeData.description === 'object' && 'type' in nodeData.description ? nodeData.description as JSONContent : { type: 'doc', content: [{ type: 'paragraph' }] }}
+                    onChange={handleDescriptionChange}
+                />
             </div>
         </div>
     );

@@ -61,16 +61,15 @@ export default function AssumptionManager({ solution }: { solution: Solution & {
     const { getCanvasData } = useStore();
     const [view, setView] = useState<'list' | 'matrix'>('list');
     const assumptions = solution.assumptions || [];
-    const handleApiCall = async (apiCall: Promise<any>) => {
-        try {
-            await apiCall;
-            // This will refresh the entire canvas state, ensuring this component re-renders
-            // with the latest data from the server.
-            getCanvasData();
-        } catch (error) {
-            const message = error instanceof Error ? error.message : "An unknown error occurred.";
-            alert(`An error occurred: ${message}`);
-        }
+    const handleApiCall = (apiCall: Promise<unknown>) => {
+        apiCall
+            .then(() => {
+                getCanvasData();
+            })
+            .catch((error) => {
+                const message = error instanceof Error ? error.message : "An unknown error occurred.";
+                alert(`An error occurred: ${message}`);
+            });
     };
 
     return (

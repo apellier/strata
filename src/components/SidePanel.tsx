@@ -23,7 +23,7 @@ export default function SidePanel({ panelState, onClose, onFocusOpportunity, onF
   const nodes = useStore((state) => state.nodes); 
   if (!panelState.isOpen) return null;
 
-  const node = nodes.find((n) => n.id === (panelState as any).nodeId);
+  const node = nodes.find((n) => n.id === (panelState as { nodeId: string }).nodeId);
   const nodeData = node?.data;
 
   const getTitle = () => {
@@ -36,9 +36,9 @@ export default function SidePanel({ panelState, onClose, onFocusOpportunity, onF
   const getFocusHandler = () => {
     if (!shouldRenderDetails) return () => {};
     switch (nodeData.type) {
-      case 'opportunity': return onFocusOpportunity;
-      case 'solution': return onFocusSolution;
-      case 'outcome': return onFocusOutcome;
+      case 'opportunity': return (node: NodeData) => onFocusOpportunity(node as Opportunity);
+      case 'solution': return (node: NodeData) => onFocusSolution(node as Solution);
+      case 'outcome': return (node: NodeData) => onFocusOutcome(node as Outcome);
       default: return () => {};
     }
   };

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useStore } from '@/lib/store';
+import { useStore, NodeData } from '@/lib/store';
 import { Maximize, Lightbulb, TestTube2, Target } from 'lucide-react';
 import * as api from '@/lib/api';
 import { DebouncedInput } from './ui';
@@ -11,15 +11,10 @@ import SolutionDetails from './SolutionDetails';
 import ExperimentDashboard from './ExperimentDashboard';
 import type { Opportunity, Solution, Outcome } from '@prisma/client';
 
-type NodeData = (Opportunity | Solution | Outcome) & {
-    label: string;
-    type: 'opportunity' | 'solution' | 'outcome';
-};
+export default function ElementDetails({ nodeData, onFocus, isFocusMode }: { nodeData: NodeData, onFocus: (node: NodeData) => void, isFocusMode: boolean }) {
+    const { getCanvasData } = useStore();
 
-export default function ElementDetails({ nodeData, onFocus, isFocusMode }: { nodeData: any, onFocus: (node: any) => void, isFocusMode: boolean }) {
-    const { getCanvasData, nodes } = useStore();
-
-    const handleDebouncedUpdate = (field: string, value: any) => {
+    const handleDebouncedUpdate = (field: string, value: string) => {
         useStore.getState().updateNodeData(nodeData.id, nodeData.type, { [field]: value });
     };
 

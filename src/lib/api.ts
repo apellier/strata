@@ -1,6 +1,10 @@
 import type { Outcome, Opportunity, Solution, Evidence, Interview, Assumption, Experiment } from '@prisma/client';
+import { TypedOpportunity, TypedSolution } from './store'; // <-- ADD THIS IMPORT
+
+
 type NodeType = 'outcome' | 'opportunity' | 'solution';
 type NodeData = Outcome | Opportunity | Solution;
+
 async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
   const defaultOptions = {
     headers: {
@@ -15,7 +19,7 @@ async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T>
     try {
       const errorBody = await response.json();
       errorMessage = errorBody.message || errorMessage;
-    } catch (e) {}
+    } catch (e: unknown) {}
     throw new Error(errorMessage);
   }
 
@@ -29,8 +33,8 @@ async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T>
 export const getCanvasData = async () => {
   return Promise.all([
     apiRequest<Outcome[]>('/api/outcomes', { method: 'GET' }),
-    apiRequest<(Opportunity & { evidences: any[] })[]>('/api/opportunities', { method: 'GET' }),
-    apiRequest<(Solution & { assumptions: any[] })[]>('/api/solutions', { method: 'GET' }),
+    apiRequest<TypedOpportunity[]>('/api/opportunities', { method: 'GET' }),
+    apiRequest<TypedSolution[]>('/api/solutions', { method: 'GET' }),
   ]);
 };
 
