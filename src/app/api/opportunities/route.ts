@@ -82,7 +82,7 @@ export async function POST(req: Request) {
         return NextResponse.json(newOpportunity, { status: 201 });
     } catch (error) {
         if (error instanceof z.ZodError) {
-          return new NextResponse(JSON.stringify({ message: 'Invalid input data', errors: error.errors }), { status: 400 });
+          return new NextResponse(JSON.stringify({ message: 'Invalid input data', errors: error.issues }), { status: 400 });
         }
         console.error("Error creating opportunity:", error);
         return new NextResponse(JSON.stringify({ message: 'Failed to create opportunity' }), { status: 500 });
@@ -144,7 +144,7 @@ export async function PUT(req: Request) {
     return NextResponse.json(updatedOpportunity);
   } catch (error) {
     if (error instanceof z.ZodError) {
-        return new NextResponse(JSON.stringify({ message: 'Invalid input data', errors: error.errors }), { status: 400 });
+        return new NextResponse(JSON.stringify({ message: 'Invalid input data', errors: error.issues }), { status: 400 });
     }
     console.error("Error updating opportunity:", error);
     return new NextResponse(JSON.stringify({ message: 'Failed to update opportunity' }), { status: 500 });

@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     return NextResponseExperiment.json(newExperiment, { status: 201 });
   } catch (error) {
     if (error instanceof zExperiment.ZodError) {
-        return new NextResponseExperiment(JSON.stringify({ message: 'Invalid input data', errors: error.errors }), { status: 400 });
+        return new NextResponseExperiment(JSON.stringify({ message: 'Invalid input data', errors: error.issues }), { status: 400 });
     }
     console.error("Error creating experiment:", error);
     return new NextResponseExperiment(JSON.stringify({ message: 'Error creating experiment' }), { status: 500 });
@@ -64,7 +64,7 @@ export async function PUT(req: Request) {
         return NextResponseExperiment.json(updatedExperiment);
     } catch (error) {
         if (error instanceof zExperiment.ZodError) {
-            return new NextResponseExperiment(JSON.stringify({ message: 'Invalid input data', errors: error.errors }), { status: 400 });
+            return new NextResponseExperiment(JSON.stringify({ message: 'Invalid input data', errors: error.issues }), { status: 400 });
         }
         console.error("Error updating experiment:", error);
         return new NextResponseExperiment(JSON.stringify({ message: 'Error updating experiment' }), { status: 500 });

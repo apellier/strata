@@ -79,7 +79,7 @@ export async function POST(req: Request) {
     return NextResponseSolution.json(finalSolution, { status: 201 });
   } catch (error) {
     if (error instanceof zSolution.ZodError) {
-        return new NextResponseSolution(JSON.stringify({ message: 'Invalid input data', errors: error.errors }), { status: 400 });
+        return new NextResponseSolution(JSON.stringify({ message: 'Invalid input data', errors: error.issues }), { status: 400 });
     }
     console.error("Error creating solution:", error);
     return new NextResponseSolution(JSON.stringify({ message: 'Failed to create solution' }), { status: 500 });
@@ -109,7 +109,7 @@ export async function PUT(req: Request) {
         return NextResponseSolution.json(updatedSolution);
     } catch (error) {
         if (error instanceof zSolution.ZodError) {
-            return new NextResponseSolution(JSON.stringify({ message: 'Invalid input data', errors: error.errors }), { status: 400 });
+            return new NextResponseSolution(JSON.stringify({ message: 'Invalid input data', errors: error.issues }), { status: 400 });
         }
         console.error("Error updating solution:", error);
         return new NextResponseSolution(JSON.stringify({ message: 'Failed to update solution' }), { status: 500 });

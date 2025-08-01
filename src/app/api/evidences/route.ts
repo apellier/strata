@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     return NextResponseEvidence.json(newEvidence, { status: 201 });
   } catch (error) {
     if (error instanceof zEvidence.ZodError) {
-        return new NextResponseEvidence(JSON.stringify({ message: 'Invalid input data', errors: error.errors }), { status: 400 });
+        return new NextResponseEvidence(JSON.stringify({ message: 'Invalid input data', errors: error.issues }), { status: 400 });
     }
     console.error("Error creating evidence:", error);
     return new NextResponseEvidence(JSON.stringify({ message: 'Failed to create evidence' }), { status: 500 });

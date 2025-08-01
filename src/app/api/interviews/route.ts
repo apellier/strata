@@ -44,7 +44,7 @@ export async function POST(req: Request) {
         return NextResponseInterview.json(newInterview, { status: 201 });
     } catch (error) {
         if (error instanceof zInterview.ZodError) {
-            return new NextResponseInterview(JSON.stringify({ message: 'Invalid input data', errors: error.errors }), { status: 400 });
+            return new NextResponseInterview(JSON.stringify({ message: 'Invalid input data', errors: error.issues }), { status: 400 });
         }
         console.error("Error creating interview:", error);
         return new NextResponseInterview(JSON.stringify({ message: 'Failed to create interview' }), { status: 500 });
@@ -74,7 +74,7 @@ export async function PUT(req: Request) {
         return NextResponseInterview.json(updatedInterview);
     } catch (error) {
         if (error instanceof zInterview.ZodError) {
-            return new NextResponseInterview(JSON.stringify({ message: 'Invalid input data', errors: error.errors }), { status: 400 });
+            return new NextResponseInterview(JSON.stringify({ message: 'Invalid input data', errors: error.issues }), { status: 400 });
         }
         console.error("Error updating interview:", error);
         return new NextResponseInterview(JSON.stringify({ message: 'Failed to update interview' }), { status: 500 });

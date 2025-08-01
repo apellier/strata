@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     return NextResponseAssumption.json(newAssumption, { status: 201 });
   } catch (error) {
     if (error instanceof zAssumption.ZodError) {
-        return new NextResponseAssumption(JSON.stringify({ message: 'Invalid input data', errors: error.errors }), { status: 400 });
+        return new NextResponseAssumption(JSON.stringify({ message: 'Invalid input data', errors: error.issues }), { status: 400 });
     }
     console.error("Error creating assumption:", error);
     return new NextResponseAssumption(JSON.stringify({ message: 'Error creating assumption' }), { status: 500 });
@@ -77,7 +77,7 @@ export async function PUT(req: Request) {
         return NextResponseAssumption.json(updatedAssumption);
     } catch (error) {
         if (error instanceof zAssumption.ZodError) {
-            return new NextResponseAssumption(JSON.stringify({ message: 'Invalid input data', errors: error.errors }), { status: 400 });
+            return new NextResponseAssumption(JSON.stringify({ message: 'Invalid input data', errors: error.issues }), { status: 400 });
         }
         console.error("Error updating assumption:", error);
         return new NextResponseAssumption(JSON.stringify({ message: 'Error updating assumption' }), { status: 500 });
