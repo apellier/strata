@@ -1,21 +1,22 @@
 // src/app/api/experiments/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import prismaExperimentId from '@/lib/db';
+import prisma from '@/lib/db';
 import { protectApiRoute } from '@/lib/auth';
 
-interface RouteContext {
-  params: { id: string };
-}
-
-export async function DELETE(req: NextRequest, { params }: RouteContext) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const { user, error } = await protectApiRoute();
   if (error) return error;
 
-  const { id } = params;
-  if (!id) return NextResponse.json({ message: 'Missing experiment ID' }, { status: 400 });
+  const { id } = await params; // await the Promise
+  if (!id) {
+    return NextResponse.json({ message: 'Missing experiment ID' }, { status: 400 });
+  }
 
   try {
-    const experiment = await prismaExperimentId.experiment.findFirst({
+    const experiment = await prisma.experiment.findFirst({
       where: { id, userId: user.id }
     });
 
@@ -23,10 +24,10 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ message: 'Experiment not found or unauthorized' }, { status: 404 });
     }
 
-    await prismaExperimentId.experiment.delete({ where: { id } });
+    await prisma.experiment.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });
-  } catch (error) {
-    console.error("Error deleting experiment:", error);
+  } catch (err) {
+    console.error("Error deleting experiment:", err);
     return NextResponse.json({ message: 'Error deleting experiment' }, { status: 500 });
   }
 }
