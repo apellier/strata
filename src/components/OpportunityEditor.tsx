@@ -4,8 +4,18 @@ import React from 'react';
 import type { Opportunity } from '@prisma/client';
 import { X } from 'lucide-react';
 import ElementDetails from './ElementDetails';
+import { TypedOpportunity } from '@/lib/store'; // Import the correct type
 
 export default function OpportunityEditor({ opportunity, onClose }: { opportunity: Opportunity, onClose: () => void }) {
+    // Create a correctly typed object for the ElementDetails component
+    const nodeDataForDetails: TypedOpportunity = {
+        ...opportunity,
+        type: 'opportunity',
+        label: opportunity.name,
+        // The base Opportunity type might not have evidences, so we default to an empty array
+        evidences: (opportunity as TypedOpportunity).evidences || [], 
+    };
+    
     return (
         <div className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center animate-fade-in">
             <div className="bg-white w-full h-full md:w-[90vw] md:h-[90vh] md:rounded-lg shadow-2xl flex flex-col">
@@ -14,7 +24,7 @@ export default function OpportunityEditor({ opportunity, onClose }: { opportunit
                     <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-200"><X size={24} /></button>
                 </div>
                 <div className="flex-grow overflow-y-auto p-6">
-                   <ElementDetails nodeData={opportunity} onFocus={() => {}} isFocusMode={true} />
+                   <ElementDetails nodeData={nodeDataForDetails} onFocus={() => {}} isFocusMode={true} />
                 </div>
             </div>
         </div>
