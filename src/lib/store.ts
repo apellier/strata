@@ -1,15 +1,43 @@
-// src/lib/store.ts
 import { create } from 'zustand';
-import { Node, Edge, OnNodesChange, OnEdgesChange, applyNodeChanges, applyEdgeChanges, Connection } from 'reactflow';
+import {
+  Node,
+  Edge,
+  OnNodesChange,
+  OnEdgesChange,
+  applyNodeChanges,
+  applyEdgeChanges,
+  Connection,
+  NodeChange,
+  EdgeChange,
+} from 'reactflow';
 import * as api from './api';
-import type { Outcome, Opportunity, Solution, Evidence, Interview, Assumption, Experiment } from '@prisma/client';
+import type {
+  Outcome,
+  Opportunity,
+  Solution,
+  Evidence,
+  Interview,
+  Assumption,
+  Experiment,
+} from '@prisma/client';
 import toast from 'react-hot-toast';
+import { devtools } from 'zustand/middleware';
 
 type NodeType = 'outcome' | 'opportunity' | 'solution';
 
-export type TypedOutcome = Outcome & { type: 'outcome'; label: string; };
-export type TypedOpportunity = Opportunity & { type: 'opportunity'; label: string; evidences: (Evidence & { interview: Interview })[]; evidenceIds?: string[], _count?: { solutions: number } };
-export type TypedSolution = Solution & { type: 'solution'; label: string; assumptions: (Assumption & { experiments: Experiment[] })[] };
+export type TypedOutcome = Outcome & { type: 'outcome'; label: string };
+export type TypedOpportunity = Opportunity & {
+  type: 'opportunity';
+  label: string;
+  evidences: (Evidence & { interview: Interview })[];
+  evidenceIds?: string[];
+  _count?: { solutions: number };
+};
+export type TypedSolution = Solution & {
+  type: 'solution';
+  label: string;
+  assumptions: (Assumption & { experiments: Experiment[] })[];
+};
 
 export type NodeData = TypedOutcome | TypedOpportunity | TypedSolution;
 
@@ -18,129 +46,213 @@ const NODE_WIDTH = 256;
 const HORIZONTAL_SPACING = 50;
 const VERTICAL_SPACING = 150;
 
+export type HistoryState = {
+  nodes: Node<NodeData>[];
+  edges: Edge[];
+};
+
 export interface AppState {
   nodes: Node<NodeData>[];
   edges: Edge[];
   isDraggingEvidence: boolean;
+  past: HistoryState[];
+  future: HistoryState[];
   setIsDraggingEvidence: (isDragging: boolean) => void;
   getCanvasData: () => Promise<void>;
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: (connection: Connection) => Promise<void>;
-  updateNodePosition: (id: string, type: NodeType, position: { x: number; y: number }) => void;
-  addNode: (type: 'outcome' | 'opportunity', parentNode?: Node<NodeData>) => Promise<void>;
-  updateNodeData: (id: string, type: NodeType, data: Partial<NodeData>) => Promise<void>;
+  updateNodePosition: (
+    id: string,
+    type: NodeType,
+    position: { x: number; y: number }
+  ) => void;
+  addNode: (
+    type: 'outcome' | 'opportunity',
+    parentNode?: Node<NodeData>
+  ) => Promise<void>;
+  updateNodeData: (
+    id: string,
+    type: NodeType,
+    data: Partial<NodeData>
+  ) => Promise<void>;
   onNodesDelete: (deletedNodes: Node<NodeData>[]) => void;
-  promoteIdeaToSolution: (candidate: { title: string; quickAssumptions: string[] }, opportunity: Opportunity) => Promise<void>;
-  linkEvidenceToOpportunity: (evidenceId: string, opportunityId: string) => Promise<void>;
-  createOpportunityOnDrop: (sourceNode: Node<NodeData>, position: { x: number; y: number }) => Promise<void>;
+  promoteIdeaToSolution: (
+    candidate: { title: string; quickAssumptions: string[] },
+    opportunity: Opportunity
+  ) => Promise<void>;
+  linkEvidenceToOpportunity: (
+    evidenceId: string,
+    opportunityId: string
+  ) => Promise<void>;
+  createOpportunityOnDrop: (
+    sourceNode: Node<NodeData>,
+    position: { x: number; y: number }
+  ) => Promise<void>;
+  takeSnapshot: () => void;
+  undo: () => void;
+  redo: () => void;
 }
 
-export const useStore = create<AppState>((set, get) => ({
-  nodes: [],
-  edges: [],
-  isDraggingEvidence: false,
-  setIsDraggingEvidence: (isDragging) => set({ isDraggingEvidence: isDragging }),
+export const useStore = create<AppState>()(
+  devtools((set, get) => ({
+    nodes: [],
+    edges: [],
+    isDraggingEvidence: false,
+    past: [],
+    future: [],
+    setIsDraggingEvidence: (isDragging) => set({ isDraggingEvidence: isDragging }),
 
-  getCanvasData: async () => {
-    try {
-      const [outcomes, opportunities, solutions] = await api.getCanvasData();
-      const newNodes: Node<NodeData>[] = [];
-      const newEdges: Edge[] = [];
+    getCanvasData: async () => {
+      try {
+        const [outcomes, opportunities, solutions] = await api.getCanvasData();
+        const newNodes: Node<NodeData>[] = [];
+        const newEdges: Edge[] = [];
 
-      outcomes.forEach((o) => newNodes.push({ id: o.id, type: 'default', position: { x: o.x_position, y: o.y_position }, data: { ...o, label: o.name, type: 'outcome' } }));
-
-      opportunities.forEach((o) => {
-          newNodes.push({ id: o.id, type: 'default', position: { x: o.x_position, y: o.y_position }, data: { ...o, label: o.name, type: 'opportunity' } as TypedOpportunity });
-          if (o.parentId) newEdges.push({ id: `e-${o.parentId}-${o.id}`, source: o.parentId, target: o.id, animated: true });
-          else if (o.outcomeId) newEdges.push({ id: `e-${o.outcomeId}-${o.id}`, source: o.outcomeId, target: o.id, animated: true });
-      });
-
-      solutions.forEach((s) => {
-          newNodes.push({ id: s.id, type: 'default', position: { x: s.x_position, y: s.y_position }, data: { ...s, label: s.name, type: 'solution' } as TypedSolution });
+        outcomes.forEach((o) =>
+          newNodes.push({
+            id: o.id,
+            type: 'default',
+            position: { x: o.x_position, y: o.y_position },
+            data: { ...o, label: o.name, type: 'outcome' },
+          })
+        );
+        opportunities.forEach((o) => {
+          newNodes.push({
+            id: o.id,
+            type: 'default',
+            position: { x: o.x_position, y: o.y_position },
+            data: { ...o, label: o.name, type: 'opportunity' } as TypedOpportunity,
+          });
+          if (o.parentId)
+            newEdges.push({
+              id: `e-${o.parentId}-${o.id}`,
+              source: o.parentId,
+              target: o.id,
+              animated: true,
+            });
+          else if (o.outcomeId)
+            newEdges.push({
+              id: `e-${o.outcomeId}-${o.id}`,
+              source: o.outcomeId,
+              target: o.id,
+              animated: true,
+            });
+        });
+        solutions.forEach((s) => {
+          newNodes.push({
+            id: s.id,
+            type: 'default',
+            position: { x: s.x_position, y: s.y_position },
+            data: { ...s, label: s.name, type: 'solution' } as TypedSolution,
+          });
           if (s.opportunityId) {
-              newEdges.push({ id: `e-${s.opportunityId}-${s.id}`, source: s.opportunityId, target: s.id, animated: true, style: { stroke: '#1DB954', strokeWidth: 2 } });
+            newEdges.push({
+              id: `e-${s.opportunityId}-${s.id}`,
+              source: s.opportunityId,
+              target: s.id,
+              animated: true,
+              style: { stroke: '#1DB954', strokeWidth: 2 },
+            });
           }
-      });
+        });
 
-      set({ nodes: newNodes, edges: newEdges });
-    } catch (error) {
-        toast.error("Failed to load canvas data.");
-        console.error("Error fetching canvas data:", error);
-    }
-  },
+        set({ nodes: newNodes, edges: newEdges, past: [], future: [] });
+      } catch (error) {
+        toast.error('Failed to load canvas data.');
+        console.error('Error fetching canvas data:', error);
+      }
+    },
 
-  onNodesChange: (changes) => set((state) => ({ nodes: applyNodeChanges(changes, state.nodes) })),
-  onEdgesChange: (changes) => set((state) => ({ edges: applyEdgeChanges(changes, state.edges) })),
+    onNodesChange: (changes: NodeChange[]) =>
+      set((state) => ({ nodes: applyNodeChanges(changes, state.nodes) })),
 
-  onConnect: async (connection) => {
-    const { source, target } = connection;
-    if (!source || !target) return;
+    onEdgesChange: (changes: EdgeChange[]) =>
+      set((state) => ({ edges: applyEdgeChanges(changes, state.edges) })),
 
-    const { nodes } = get();
-    const sourceNode = nodes.find(n => n.id === source);
-    const targetNode = nodes.find(n => n.id === target);
-    if (!sourceNode || !targetNode) return;
+    onConnect: async (connection) => {
+      get().takeSnapshot(); // Correctly call the function
+      const { source, target } = connection;
+      if (!source || !target) return;
 
-    const targetType = targetNode.data.type;
-    let updateData: Partial<Opportunity | Solution> = {};
+      const { nodes } = get();
+      const sourceNode = nodes.find((n) => n.id === source);
+      const targetNode = nodes.find((n) => n.id === target);
+      if (!sourceNode || !targetNode) return;
 
-    if (targetType === 'opportunity') {
+      const targetType = targetNode.data.type;
+      let updateData: Partial<Opportunity | Solution> = {};
+
+      if (targetType === 'opportunity') {
         updateData = {
-            outcomeId: sourceNode.data.type === 'outcome' ? source : (sourceNode.data as Opportunity).outcomeId,
-            parentId: sourceNode.data.type === 'opportunity' ? source : null
+          outcomeId:
+            sourceNode.data.type === 'outcome'
+              ? source
+              : (sourceNode.data as Opportunity).outcomeId,
+          parentId: sourceNode.data.type === 'opportunity' ? source : null,
         };
-    } else if (targetType === 'solution') {
+      } else if (targetType === 'solution') {
         updateData = { opportunityId: source };
-    }
+      }
 
-    const updatedNode = await toast.promise(api.updateNode(targetType, target, updateData), {
-        loading: 'Connecting nodes...',
-        success: 'Nodes connected!',
-        error: 'Failed to connect nodes.',
-    });
+      const updatedNode = await toast.promise(
+        api.updateNode(targetType, target, updateData),
+        {
+          loading: 'Connecting nodes...',
+          success: 'Nodes connected!',
+          error: 'Failed to connect nodes.',
+        }
+      );
 
-    if (updatedNode) {
-        set(state => ({
-            edges: applyEdgeChanges([{ type: 'add', item: { id: `e-${source}-${target}`, source, target, animated: true } }], state.edges),
-            nodes: state.nodes.map(n => {
-                if (n.id === target) {
-                    // FIX: Smartly merge the data to preserve required properties like `evidences`
-                    const mergedData = {
-                        ...n.data,
-                        ...updatedNode,
-                        label: updatedNode.name || n.data.label
-                    };
-                    if (n.data.type === 'opportunity' && !('evidences' in updatedNode)) {
-                        (mergedData as TypedOpportunity).evidences = n.data.evidences;
-                    }
-                    return { ...n, data: mergedData as NodeData };
-                }
-                return n;
-            })
+      if (updatedNode) {
+        set((state) => ({
+          edges: applyEdgeChanges(
+            [{ type: 'add', item: { id: `e-${source}-${target}`, source, target, animated: true } }],
+            state.edges
+          ),
+          nodes: state.nodes.map((n) => {
+            if (n.id === target) {
+              const mergedData = {
+                ...n.data,
+                ...updatedNode,
+                label: updatedNode.name || n.data.label,
+              };
+              if (
+                n.data.type === 'opportunity' &&
+                !('evidences' in updatedNode)
+              ) {
+                (mergedData as TypedOpportunity).evidences = n.data.evidences;
+              }
+              return { ...n, data: mergedData as NodeData };
+            }
+            return n;
+          }),
         }));
-    }
-  },
+      }
+    },
 
-  updateNodePosition: (id, type, position) => {
-    set(state => ({
-        nodes: state.nodes.map(n => n.id === id ? { ...n, position } : n)
-    }));
-
-    const apiCall = api.updateNode(type, id, { x_position: position.x, y_position: position.y });
-
-    toast.promise(apiCall, {
+    updateNodePosition: (id, type, position) => {
+      // Snapshot is handled by onNodeDragStop in the canvas component
+      set((state) => ({
+        nodes: state.nodes.map((n) => (n.id === id ? { ...n, position } : n)),
+      }));
+      const apiCall = api.updateNode(type, id, {
+        x_position: position.x,
+        y_position: position.y,
+      });
+      toast.promise(apiCall, {
         loading: 'Saving position...',
         success: 'Position saved!',
         error: (err) => {
-            console.error("Failed to save position:", err);
-            get().getCanvasData();
-            return 'Failed to save position.';
-        }
-    });
-  },
+          console.error('Failed to save position:', err);
+          get().getCanvasData();
+          return 'Failed to save position.';
+        },
+      });
+    },
 
   addNode: async (type, parentNode) => {
+    get().takeSnapshot();
     const { nodes } = get();
     let position = { x: 100, y: 100 };
 
@@ -206,6 +318,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateNodeData: async (id, type, data) => {
+    get().takeSnapshot();
     if (data.name) {
       set(state => ({
           nodes: state.nodes.map(n => {
@@ -240,6 +353,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   onNodesDelete: (deletedNodes) => {
+    get().takeSnapshot();
     for (const node of deletedNodes) {
         api.deleteNode(node.data.type, node.id)
             .then(() => toast.success(`${node.data.type} deleted.`))
@@ -248,6 +362,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   promoteIdeaToSolution: async (candidate, opportunity) => {
+    get().takeSnapshot();
     const apiCall = api.promoteIdeaToSolution(candidate, opportunity);
     toast.promise(apiCall, {
         loading: 'Promoting idea to solution...',
@@ -279,6 +394,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   linkEvidenceToOpportunity: async (evidenceId: string, opportunityId: string) => {
+    get().takeSnapshot();
     const { nodes } = get();
     const opportunityNode = nodes.find(n => n.id === opportunityId);
     if (!opportunityNode || opportunityNode.data.type !== 'opportunity') return;
@@ -301,6 +417,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   createOpportunityOnDrop: async (sourceNode, position) => {
+    get().takeSnapshot();
     const { nodes } = get();
     const children = nodes.filter(n => {
         if (n.data.type === 'opportunity') {
@@ -355,4 +472,42 @@ export const useStore = create<AppState>((set, get) => ({
     }));
   },
 
-}));
+  takeSnapshot: () => {
+    set((state) => ({
+      past: [...state.past, { nodes: state.nodes, edges: state.edges }],
+      future: [], // Clear future when a new action is taken
+    }));
+  },
+
+  undo: () => {
+    const { past, nodes, edges, future } = get();
+    if (past.length === 0) return;
+
+    const previousState = past[past.length - 1];
+    const newPast = past.slice(0, past.length - 1);
+
+    set({
+      past: newPast,
+      nodes: previousState.nodes,
+      edges: previousState.edges,
+      future: [{ nodes, edges }, ...future],
+    });
+  },
+
+  redo: () => {
+    const { future, nodes, edges, past } = get();
+    if (future.length === 0) return;
+
+    const nextState = future[0];
+    const newFuture = future.slice(1);
+
+    set({
+      past: [...past, { nodes, edges }],
+      nodes: nextState.nodes,
+      edges: nextState.edges,
+      future: newFuture,
+    });
+  },
+
+}))
+);
