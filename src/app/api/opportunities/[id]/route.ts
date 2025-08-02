@@ -1,11 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'; // Corrected import
+// src/app/api/opportunities/[id]/route.ts
+import { NextRequest, NextResponse } from 'next/server';
 import prismaClient from '@/lib/db';
 import { protectApiRoute } from '@/lib/auth';
 
-export async function DELETE(
-  req: NextRequest, // Corrected type
-  { params }: { params: { id: string } }
-) {
+interface RouteContext {
+  params: { id: string };
+}
+
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
   const { user, error } = await protectApiRoute();
   if (error) return error;
 

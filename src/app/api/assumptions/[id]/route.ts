@@ -1,10 +1,14 @@
 // src/app/api/assumptions/[id]/route.ts
-
-import { NextRequest, NextResponse } from 'next/server'; // Corrected import
+import { NextRequest, NextResponse } from 'next/server';
 import prismaAssumptionId from '@/lib/db';
 import { protectApiRoute } from '@/lib/auth';
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) { // Corrected type
+// Define the correct context type
+interface RouteContext {
+  params: { id: string };
+}
+
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
   const { user, error } = await protectApiRoute();
   if (error) return error;
 
