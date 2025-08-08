@@ -50,9 +50,68 @@ const EditablePill = ({ label, value, onUpdate, placeholder, type = 'text', opti
     );
 };
 
-export default function OutcomeDetails({ nodeData }: { nodeData: TypedOutcome }) {
+export default function OutcomeDetails({ 
+    nodeData, 
+    onFocusOpportunity, 
+    onFocusSolution, 
+    onFocusOutcome, 
+    onFocusInterview, 
+    onFocusNode 
+}: { 
+    nodeData: TypedOutcome;
+    onFocusOpportunity?: (opportunity: any) => void;
+    onFocusSolution?: (solution: any) => void;
+    onFocusOutcome?: (outcome: any) => void;
+    onFocusInterview?: (id: string) => void;
+    onFocusNode?: (nodeId: string) => void;
+}) {
     const { updateNodeData } = useStore();
     const debouncedUpdate = useCallback(updateNodeData, [updateNodeData]);
+    
+    const handleMentionClick = useCallback(async (mentionId: string, mentionType: string) => {
+        try {
+            switch (mentionType) {
+                case 'interview':
+                    if (onFocusInterview) {
+                        onFocusInterview(mentionId);
+                    }
+                    break;
+                case 'outcome':
+                    if (onFocusOutcome && onFocusNode) {
+                        const response = await fetch(`/api/outcomes/${mentionId}`);
+                        if (response.ok) {
+                            const outcome = await response.json();
+                            onFocusOutcome(outcome);
+                            onFocusNode(outcome.id);
+                        }
+                    }
+                    break;
+                case 'opportunity':
+                    if (onFocusOpportunity && onFocusNode) {
+                        const response = await fetch(`/api/opportunities/${mentionId}`);
+                        if (response.ok) {
+                            const opportunity = await response.json();
+                            onFocusOpportunity(opportunity);
+                            onFocusNode(opportunity.id);
+                        }
+                    }
+                    break;
+                case 'solution':
+                    if (onFocusSolution && onFocusNode) {
+                        const response = await fetch(`/api/solutions/${mentionId}`);
+                        if (response.ok) {
+                            const solution = await response.json();
+                            onFocusSolution(solution);
+                            onFocusNode(solution.id);
+                        }
+                    }
+                    break;
+            }
+        } catch (error) {
+            console.error('Error handling mention click:', error);
+        }
+    }, [onFocusOpportunity, onFocusSolution, onFocusOutcome, onFocusInterview, onFocusNode]);
+
     const handleFieldUpdate = (field: keyof TypedOutcome, value: string | number) => {
         let finalValue: string | number | null = value;
         if (field === 'currentValue') finalValue = parseFloat(value as string) || null;
@@ -74,6 +133,7 @@ export default function OutcomeDetails({ nodeData }: { nodeData: TypedOutcome })
                     key={nodeData.id}
                     content={nodeData.description && typeof nodeData.description === 'object' && 'type' in nodeData.description ? nodeData.description as JSONContent : { type: 'doc', content: [{ type: 'paragraph' }] }}
                     onChange={handleDescriptionChange}
+                    onMentionClick={handleMentionClick}
                 />
             </div>
         </div>

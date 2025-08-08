@@ -10,7 +10,25 @@ import SolutionDetails from './SolutionDetails';
 import { useStore, NodeData, TypedOpportunity, TypedSolution, TypedOutcome } from '@/lib/store';
 
 
-export default function ElementDetails({ nodeData, onFocus, isFocusMode }: { nodeData: NodeData, onFocus: (node: NodeData) => void, isFocusMode: boolean }) {
+export default function ElementDetails({ 
+    nodeData, 
+    onFocus, 
+    isFocusMode, 
+    onFocusOpportunity, 
+    onFocusSolution, 
+    onFocusOutcome, 
+    onFocusInterview, 
+    onFocusNode 
+}: { 
+    nodeData: NodeData, 
+    onFocus: (node: NodeData) => void, 
+    isFocusMode: boolean;
+    onFocusOpportunity?: (opportunity: any) => void;
+    onFocusSolution?: (solution: any) => void;
+    onFocusOutcome?: (outcome: any) => void;
+    onFocusInterview?: (id: string) => void;
+    onFocusNode?: (nodeId: string) => void;
+}) {
     const { getCanvasData } = useStore();
 
     const handleDebouncedUpdate = (field: string, value: string) => {
@@ -33,10 +51,18 @@ export default function ElementDetails({ nodeData, onFocus, isFocusMode }: { nod
     };
 
     const renderDetails = () => {
+        const mentionProps = {
+            onFocusOpportunity,
+            onFocusSolution,
+            onFocusOutcome,
+            onFocusInterview,
+            onFocusNode
+        };
+        
         switch (nodeData.type) {
-            case 'outcome': return <OutcomeDetails nodeData={nodeData} />;
-            case 'opportunity': return <OpportunityDetails nodeData={nodeData} />;
-            case 'solution': return <SolutionDetails nodeData={nodeData} />;
+            case 'outcome': return <OutcomeDetails nodeData={nodeData} {...mentionProps} />;
+            case 'opportunity': return <OpportunityDetails nodeData={nodeData} {...mentionProps} />;
+            case 'solution': return <SolutionDetails nodeData={nodeData} {...mentionProps} />;
             default: return <p>This node type does not have details.</p>;
         }
     };

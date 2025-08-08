@@ -81,6 +81,8 @@ const DiscoveryCanvasContent = ({
   onFocusOpportunity,
   onFocusSolution,
   onFocusOutcome,
+  onFocusInterview,
+  onFocusNode,
   panelState,
   setPanelState,
 }: {
@@ -88,6 +90,8 @@ const DiscoveryCanvasContent = ({
   onFocusOpportunity: (opportunity: Opportunity) => void;
   onFocusSolution: (solution: Solution) => void;
   onFocusOutcome: (outcome: Outcome) => void;
+  onFocusInterview?: (id: string) => void;
+  onFocusNode?: (nodeId: string) => void;
   panelState: PanelState;
   setPanelState: (state: PanelState) => void;
 }) => {
@@ -380,6 +384,8 @@ const DiscoveryCanvasContent = ({
         onFocusOpportunity={onFocusOpportunity}
         onFocusSolution={onFocusSolution}
         onFocusOutcome={onFocusOutcome}
+        onFocusInterview={onFocusInterview}
+        onFocusNode={onFocusNode}
       />
     </div>
   );
@@ -390,6 +396,8 @@ interface DiscoveryCanvasProps {
   onFocusOpportunity: (opportunity: Opportunity) => void;
   onFocusSolution: (solution: Solution) => void;
   onFocusOutcome: (outcome: Outcome) => void;
+  onFocusInterview?: (id: string) => void;
+  onFocusNode?: (nodeId: string) => void;
   panelState: PanelState;
   setPanelState: (state: PanelState) => void;
 }

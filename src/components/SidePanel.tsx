@@ -17,9 +17,11 @@ interface SidePanelProps {
   onFocusOpportunity: (opportunity: Opportunity) => void;
   onFocusSolution: (solution: Solution) => void;
   onFocusOutcome: (outcome: Outcome) => void;
+  onFocusInterview?: (id: string) => void;
+  onFocusNode?: (nodeId: string) => void;
 }
 
-export default function SidePanel({ panelState, onClose, onFocusOpportunity, onFocusSolution, onFocusOutcome }: SidePanelProps) {
+export default function SidePanel({ panelState, onClose, onFocusOpportunity, onFocusSolution, onFocusOutcome, onFocusInterview, onFocusNode }: SidePanelProps) {
   const nodes = useStore((state) => state.nodes); 
   if (!panelState.isOpen) return null;
 
@@ -51,7 +53,16 @@ export default function SidePanel({ panelState, onClose, onFocusOpportunity, onF
         </div>
         <div className="p-4 overflow-y-auto flex-grow">
           {shouldRenderDetails && (
-            <ElementDetails nodeData={nodeData} onFocus={getFocusHandler()} isFocusMode={false} />
+            <ElementDetails 
+              nodeData={nodeData} 
+              onFocus={getFocusHandler()} 
+              isFocusMode={false}
+              onFocusOpportunity={onFocusOpportunity}
+              onFocusSolution={onFocusSolution}
+              onFocusOutcome={onFocusOutcome}
+              onFocusInterview={onFocusInterview}
+              onFocusNode={onFocusNode}
+            />
           )}
         </div>
       </div>
