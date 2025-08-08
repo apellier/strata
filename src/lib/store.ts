@@ -22,6 +22,7 @@ import type {
 } from '@prisma/client';
 import toast from 'react-hot-toast';
 import { devtools } from 'zustand/middleware';
+import { Template } from './templates';
 
 type NodeType = 'outcome' | 'opportunity' | 'solution';
 
@@ -89,6 +90,7 @@ export interface AppState {
     sourceNode: Node<NodeData>,
     position: { x: number; y: number }
   ) => Promise<void>;
+  instantiateTemplate: (template: Template) => Promise<void>;
   takeSnapshot: () => void;
   undo: () => void;
   redo: () => void;
@@ -470,6 +472,97 @@ export const useStore = create<AppState>()(
         nodes: [...state.nodes, newNode],
         edges: [...state.edges, newEdge],
     }));
+  },
+
+  instantiateTemplate: async (template: Template) => {
+    get().takeSnapshot();
+    
+    try {
+      const nodeMap = new Map<string, string>(); // template ID -> actual ID mapping
+      const createdNodes: Node<NodeData>[] = [];
+      const createdEdges: Edge[] = [];
+
+      // Create nodes in order: outcomes first, then opportunities, then solutions
+      const sortedNodes = template.nodes.sort((a, b) => {
+        const order = { outcome: 0, opportunity: 1, solution: 2 };
+        return order[a.type] - order[b.type];
+      });
+
+      for (const templateNode of sortedNodes) {
+        const nodeData = {
+          name: templateNode.label,
+          description: templateNode.description || '',
+          x_position: templateNode.x_position,
+          y_position: templateNode.y_position,
+          ...(templateNode.type === 'opportunity' && templateNode.parentId && nodeMap.has(templateNode.parentId)
+            ? { outcomeId: nodeMap.get(templateNode.parentId) }
+            : {}),
+          ...(templateNode.type === 'solution' && templateNode.parentId && nodeMap.has(templateNode.parentId)
+            ? { opportunityId: nodeMap.get(templateNode.parentId) }
+            : {}),
+        };
+
+        const createdNode = await api.addNode(templateNode.type as 'outcome' | 'opportunity' | 'solution', nodeData);
+        nodeMap.set(templateNode.id, createdNode.id);
+
+        // Create the visual node
+        const nodeDataWithType = {
+          ...createdNode,
+          label: createdNode.name,
+          type: templateNode.type,
+        } as NodeData;
+
+        const visualNode: Node<NodeData> = {
+          id: createdNode.id,
+          type: 'default',
+          position: { x: templateNode.x_position, y: templateNode.y_position },
+          data: nodeDataWithType,
+        };
+
+        createdNodes.push(visualNode);
+
+        // Create edges based on parent relationships
+        if (templateNode.parentId && nodeMap.has(templateNode.parentId)) {
+          const sourceId = nodeMap.get(templateNode.parentId)!;
+          const edge: Edge = {
+            id: `e-${sourceId}-${createdNode.id}`,
+            source: sourceId,
+            target: createdNode.id,
+            animated: true,
+          };
+          createdEdges.push(edge);
+        }
+      }
+
+      // Add sample interview if provided
+      if (template.sampleInterview) {
+        const interview = await api.addInterview({
+          interviewee: template.sampleInterview.interviewee,
+          date: new Date(),
+          notes: { content: template.sampleInterview.notes },
+        });
+
+        // Add evidence items
+        for (const evidence of template.sampleInterview.evidence) {
+          await api.addEvidence({
+            type: evidence.type,
+            content: evidence.content,
+            interviewId: interview.id,
+          });
+        }
+      }
+
+      // Update store with all new nodes and edges
+      set(state => ({
+        nodes: [...state.nodes, ...createdNodes],
+        edges: [...state.edges, ...createdEdges],
+      }));
+
+      toast.success(`Template "${template.name}" applied successfully!`);
+    } catch (error) {
+      console.error('Error instantiating template:', error);
+      toast.error('Failed to apply template. Please try again.');
+    }
   },
 
   takeSnapshot: () => {

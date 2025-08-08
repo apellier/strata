@@ -108,3 +108,21 @@ export const searchSolutions = (query: string) =>
 export const searchInterviews = (query: string) => 
   apiRequest<(Interview & { evidences: Evidence[] })[]>(`/api/interviews?search=${encodeURIComponent(query)}`);
 
+// Feedback functions
+export const addFeedback = (data: { type: string; subject?: string; message: string }) => 
+  apiRequest<any>('/api/feedback', { method: 'POST', body: JSON.stringify(data) });
+
+export const getFeedback = (limit?: number, status?: string) => {
+  const params = new URLSearchParams();
+  if (limit) params.set('limit', limit.toString());
+  if (status) params.set('status', status);
+  const queryString = params.toString();
+  return apiRequest<any[]>(`/api/feedback${queryString ? `?${queryString}` : ''}`);
+};
+
+export const updateFeedback = (id: string, data: any) => 
+  apiRequest<any>(`/api/feedback/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+
+export const deleteFeedback = (id: string) => 
+  apiRequest<null>(`/api/feedback/${id}`, { method: 'DELETE' });
+
