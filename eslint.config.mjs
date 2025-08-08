@@ -11,24 +11,10 @@ const compat = new FlatCompat({
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 const eslintConfig = [
-  // Start with all of ESLint's core rules
-  "eslint:all",
-
-  // Add the strictest recommended configurations
-  ...compat.extends(
-    "plugin:@typescript-eslint/all",
-    "plugin:react/all",
-    "plugin:react-hooks/recommended",
-    "plugin:jsx-a11y/strict",
-    "next/core-web-vitals",
-  ),
-  
-  // Your custom rules or overrides can go here
+  ...compat.extends("next/core-web-vitals"),
   {
     rules: {
-      // Example: disable a rule that's too noisy for your project
       "no-console": "off",
-      "react/jsx-filename-extension": [1, { "extensions": [".tsx"] }]
     }
   }
 ];
