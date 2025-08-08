@@ -18,6 +18,7 @@ import 'reactflow/dist/style.css';
 
 import SidePanel, { PanelState } from './SidePanel';
 import CustomNode from './CustomNode';
+import EnhancedEmptyState from './EnhancedEmptyState';
 import { useStore, NodeData, AppState } from '@/lib/store';
 import type { Opportunity, Solution, Outcome } from '@prisma/client';
 import { useShallow } from 'zustand/react/shallow';
@@ -85,6 +86,8 @@ const DiscoveryCanvasContent = ({
   onFocusNode,
   panelState,
   setPanelState,
+  onOpenTemplates,
+  onStartTutorial,
 }: {
   focusedNodeId: string | null;
   onFocusOpportunity: (opportunity: Opportunity) => void;
@@ -94,6 +97,8 @@ const DiscoveryCanvasContent = ({
   onFocusNode?: (nodeId: string) => void;
   panelState: PanelState;
   setPanelState: (state: PanelState) => void;
+  onOpenTemplates?: () => void;
+  onStartTutorial?: () => void;
 }) => {
   const {
     nodes,
@@ -368,14 +373,16 @@ const DiscoveryCanvasContent = ({
           <Background />
         </ReactFlow>
         {nodes.length === 0 && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-gray-400 pointer-events-none">
-            <h3 className="text-lg font-semibold">Canvas is Empty</h3>
-            <p>Click &quot;+ New Outcome&quot; or press &apos;u&apos; to start.</p>
-          </div>
+          <EnhancedEmptyState
+            onCreateOutcome={() => handleAddNodeButtonClick('outcome')}
+            onCreateOpportunity={() => handleAddNodeButtonClick('opportunity')}
+            onOpenTemplates={() => onOpenTemplates?.()}
+            onStartTutorial={() => onStartTutorial?.()}
+          />
         )}
         <div className="absolute top-4 left-4 z-10 flex space-x-2">
-          <button className="btn btn-primary" onClick={() => handleAddNodeButtonClick('outcome')}>+ New Outcome</button>
-          <button className="btn btn-secondary" onClick={() => handleAddNodeButtonClick('opportunity')}>+ New Opportunity</button>
+          <button className="btn btn-primary" data-testid="add-outcome-button" onClick={() => handleAddNodeButtonClick('outcome')}>+ New Outcome</button>
+          <button className="btn btn-secondary" data-testid="add-opportunity-button" onClick={() => handleAddNodeButtonClick('opportunity')}>+ New Opportunity</button>
         </div>
       </main>
       <SidePanel
@@ -400,6 +407,8 @@ interface DiscoveryCanvasProps {
   onFocusNode?: (nodeId: string) => void;
   panelState: PanelState;
   setPanelState: (state: PanelState) => void;
+  onOpenTemplates?: () => void;
+  onStartTutorial?: () => void;
 }
 
 export default function DiscoveryCanvas(props: DiscoveryCanvasProps) {

@@ -151,6 +151,7 @@ export default function CustomNode({ id, data, selected }: NodeProps<NodeData>) 
   return (
     <div
     className={`bg-white rounded-[var(--radius)] border-t-4 w-64 transition-all duration-200 group relative ${nodeStyle.border} ${selectedStyle} ${dragOverStyle}`}
+    data-node-type={type}
     onDoubleClick={handleDoubleClick}
       onDragOver={handleDragOver}
       onDragEnter={handleDragEnter}
