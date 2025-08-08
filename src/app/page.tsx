@@ -15,6 +15,8 @@ import type { Interview, Evidence, Opportunity, Solution, Outcome } from '@prism
 import { PanelState } from '@/components/SidePanel';
 import LandingPage from './landing-page'; // Import the new landing page
 import { SignOut } from '@/components/auth-components'; // Import the SignOut button
+import CommandPalette from '@/components/CommandPalette';
+import { useHotkeys } from 'react-hotkeys-hook';
 
 type ViewMode = 'canvas' | 'list';
 type EvidenceType = 'VERBATIM' | 'PAIN_POINT' | 'DESIRE' | 'INSIGHT';
@@ -29,6 +31,7 @@ export default function Home() {
   const [focusedSolution, setFocusedSolution] = useState<Solution | null>(null);
   const [focusedOutcome, setFocusedOutcome] = useState<Outcome | null>(null);
   const [panelState, setPanelState] = useState<PanelState>({ isOpen: false });
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const { data: session, status } = useSession();
 
   const fetchData = useCallback(async (idToFocus?: string) => {
@@ -47,6 +50,12 @@ export default function Home() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Command palette hotkey
+  useHotkeys('mod+k', (e) => {
+    e.preventDefault();
+    setIsCommandPaletteOpen(true);
+  }, { enableOnFormTags: true });
 
   const handleFocusNode = (nodeId: string) => {
     setViewMode('canvas');
@@ -73,6 +82,10 @@ export default function Home() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        if (isCommandPaletteOpen) {
+          setIsCommandPaletteOpen(false);
+          return;
+        }
         if (focusedOpportunity || focusedSolution || focusedOutcome || editingInterview) {
           handleCloseOpportunityEditor();
           handleCloseSolutionEditor();
@@ -93,7 +106,7 @@ export default function Home() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isHubOpen, panelState, focusedOpportunity, focusedSolution, focusedOutcome, editingInterview]);
+  }, [isHubOpen, panelState, focusedOpportunity, focusedSolution, focusedOutcome, editingInterview, isCommandPaletteOpen]);
 
   const handleDeleteInterview = async (id: string) => {
     if (window.confirm("Are you sure you want to permanently delete this interview?")) {
@@ -173,6 +186,8 @@ export default function Home() {
                   onFocusOpportunity={setFocusedOpportunity}
                   onFocusSolution={setFocusedSolution}
                   onFocusOutcome={setFocusedOutcome}
+                  onFocusInterview={handleFocusInterview}
+                  onFocusNode={handleFocusNode}
                   panelState={panelState}
                   setPanelState={setPanelState}
                 />
@@ -193,6 +208,20 @@ export default function Home() {
       {focusedOpportunity && ( <OpportunityEditor opportunity={focusedOpportunity} onClose={handleCloseOpportunityEditor} /> )}
       {focusedSolution && ( <SolutionEditor solution={focusedSolution} onClose={handleCloseSolutionEditor} /> )}
       {focusedOutcome && ( <OutcomeEditor outcome={focusedOutcome} onClose={handleCloseOutcomeEditor} /> )}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onFocusOpportunity={setFocusedOpportunity}
+        onFocusSolution={setFocusedSolution}
+        onFocusOutcome={setFocusedOutcome}
+        onFocusInterview={handleFocusInterview}
+        onNewInterview={handleNewInterview}
+        onToggleHub={() => setIsHubOpen(!isHubOpen)}
+        onToggleViewMode={() => setViewMode(viewMode === 'canvas' ? 'list' : 'canvas')}
+        isHubOpen={isHubOpen}
+        viewMode={viewMode}
+        onFocusNode={handleFocusNode}
+      />
     </div>
   );
 }

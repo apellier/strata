@@ -20,14 +20,28 @@ const updateSolutionSchema = zSolution.object({
   status: zSolution.enum(['BACKLOG', 'DISCOVERY', 'IN_PROGRESS', 'DONE', 'BLOCKED']).optional(), // <-- FIX: Added status
 });
 
-export async function GET() {
+export async function GET(req: Request) {
   const { user, error } = await protectApiRoute();
   if (error) return error;
 
   try {
+    const url = new URL(req.url);
+    const search = url.searchParams.get('search');
+    
+    const whereClause: any = { userId: user.id };
+    
+    if (search) {
+      whereClause.name = {
+        contains: search,
+        mode: 'insensitive',
+      };
+    }
+
     const solutions = await prismaSolution.solution.findMany({
-      where: { userId: user.id },
-      include: { assumptions: { include: { experiments: true } } }
+      where: whereClause,
+      include: { assumptions: { include: { experiments: true } } },
+      orderBy: { updatedAt: 'desc' },
+      take: search ? 10 : undefined, // Limit search results
     });
     return NextResponseSolution.json(solutions);
   } catch (error) {

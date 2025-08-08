@@ -29,13 +29,25 @@ const updateOpportunitySchema = z.object({
   y_position: z.number().optional(),
 });
 
-export async function GET() {
+export async function GET(req: Request) {
     const { user, error } = await protectApiRoute();
     if (error) return error;
 
     try {
+      const url = new URL(req.url);
+      const search = url.searchParams.get('search');
+      
+      const whereClause: any = { userId: user.id };
+      
+      if (search) {
+        whereClause.name = {
+          contains: search,
+          mode: 'insensitive',
+        };
+      }
+
       const opportunities = await prisma.opportunity.findMany({
-        where: { userId: user.id },
+        where: whereClause,
         include: {
             evidences: { include: { interview: true } },
             _count: {
@@ -43,7 +55,9 @@ export async function GET() {
                     solutions: true
                 }
             }
-        }
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: search ? 10 : undefined, // Limit search results
     });
       return NextResponse.json(opportunities);
   } catch (error) {

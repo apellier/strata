@@ -95,3 +95,16 @@ export const addExperiment = (data: Partial<Experiment>) => apiRequest<Experimen
 export const updateExperiment = (id: string, data: Partial<Experiment>) => apiRequest<Experiment>('/api/experiments', { method: 'PUT', body: JSON.stringify({ id, ...data }) });
 export const deleteExperiment = (id: string) => apiRequest<null>(`/api/experiments/${id}`, { method: 'DELETE' });
 
+// Search functions for command palette
+export const searchOutcomes = (query: string) => 
+  apiRequest<Outcome[]>(`/api/outcomes?search=${encodeURIComponent(query)}`);
+
+export const searchOpportunities = (query: string) => 
+  apiRequest<TypedOpportunity[]>(`/api/opportunities?search=${encodeURIComponent(query)}`);
+
+export const searchSolutions = (query: string) => 
+  apiRequest<Solution[]>(`/api/solutions?search=${encodeURIComponent(query)}`);
+
+export const searchInterviews = (query: string) => 
+  apiRequest<(Interview & { evidences: Evidence[] })[]>(`/api/interviews?search=${encodeURIComponent(query)}`);
+

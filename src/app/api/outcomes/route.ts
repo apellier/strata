@@ -13,13 +13,27 @@ const outcomeSchema = zOutcome.object({
   y_position: zOutcome.number().optional(),
 });
 
-export async function GET() {
+export async function GET(req: Request) {
   const { user, error } = await protectApiRoute();
   if (error) return error;
 
   try {
+    const url = new URL(req.url);
+    const search = url.searchParams.get('search');
+    
+    const whereClause: any = { userId: user.id };
+    
+    if (search) {
+      whereClause.name = {
+        contains: search,
+        mode: 'insensitive',
+      };
+    }
+
     const outcomes = await prismaOutcome.outcome.findMany({
-      where: { userId: user.id },
+      where: whereClause,
+      orderBy: { updatedAt: 'desc' },
+      take: search ? 10 : undefined, // Limit search results
     });
     return NextResponseOutcome.json(outcomes);
   } catch (error) {
