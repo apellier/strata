@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Prisma } from '@prisma/client';
 import { useStore, TypedOpportunity } from '@/lib/store';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, ArrowUpRight, Trash2 } from 'lucide-react';
 
 // Define a specific type for a Solution Candidate object
 interface SolutionCandidate {
@@ -37,8 +37,21 @@ const SolutionCandidateCard = ({ candidate, onUpdate, onRemove, onPromote }: { c
                     <span className="font-medium text-gray-800">{candidate.title}</span>
                 </button>
                 <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={onPromote} title="Add to Canvas" className="p-1 text-green-600 hover:text-green-500 font-bold text-lg">↑</button>
-                    <button onClick={onRemove} title="Remove Candidate" className="p-1 text-red-500 hover:text-red-400 font-bold text-lg">×</button>
+                    <button 
+                        onClick={onPromote} 
+                        title="Promote to Solution" 
+                        className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 hover:bg-green-200 rounded text-xs font-medium transition-colors"
+                    >
+                        <ArrowUpRight size={12} />
+                        <span>Promote</span>
+                    </button>
+                    <button 
+                        onClick={onRemove} 
+                        title="Remove Candidate" 
+                        className="p-1 text-red-500 hover:text-red-600 transition-colors"
+                    >
+                        <Trash2 size={14} />
+                    </button>
                 </div>
             </div>
             {isExpanded && (
@@ -104,8 +117,9 @@ export default function SolutionCandidatesManager({ opportunity }: { opportunity
     };
 
     const handlePromote = async (candidate: SolutionCandidate, index: number) => {
-        if (window.confirm(`Are you sure you want to add "${candidate.title}" to the canvas as a new Solution?`)) {
-            // Pass the full candidate object
+        const message = `Promote "${candidate.title}" to the canvas?\n\nThis will:\n• Add it as a solution node on the canvas\n• Include any assumptions you've listed\n• Remove it from the candidates list\n\nIn real discovery, you'd run experiments first to validate this idea.`;
+        
+        if (window.confirm(message)) {
             await promoteIdeaToSolution(candidate, opportunity);
             handleRemoveCandidate(index);
         }
@@ -113,7 +127,10 @@ export default function SolutionCandidatesManager({ opportunity }: { opportunity
 
     return (
         <div className="border-t pt-4 mt-6">
-            <h3 className="text-sm font-semibold text-gray-600 mb-2">Solution Candidates</h3>
+            <div className="mb-3">
+                <h3 className="text-sm font-semibold text-gray-800 mb-1">Solution Ideas</h3>
+                <p className="text-xs text-gray-600">Brainstorm potential solutions, then promote the best ones to test</p>
+            </div>
             <div className="space-y-2 p-2 bg-gray-50 rounded-lg">
                 <div className="space-y-2">
                     {candidates.map((cand, index) => (
