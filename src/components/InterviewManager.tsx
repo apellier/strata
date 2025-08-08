@@ -76,7 +76,7 @@ export default function InterviewManager({ interviews, onFocusInterview, onNewIn
             <div className="p-4 border-b border-[var(--border)] space-y-3">
                 <div className="flex justify-between items-center">
                     <h2 className="text-lg font-bold flex items-center gap-2 text-gray-800"><Inbox size={20} />Research Hub</h2>
-                    <button onClick={onNewInterview} className="btn btn-primary !py-1 !px-3 !text-sm">New Interview</button>
+                    <button onClick={onNewInterview} className="btn btn-primary !py-1 !px-3 !text-sm" data-testid="add-interview-button">Add Interview</button>
                 </div>
                 <div className="relative">
                     <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-placeholder)] pointer-events-none" />

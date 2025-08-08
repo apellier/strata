@@ -9,14 +9,20 @@ import OpportunityEditor from '@/components/OpportunityEditor';
 import SolutionEditor from '@/components/SolutionEditor';
 import OutcomeEditor from '@/components/OutcomeEditor';
 import OpportunityListView from '@/components/OpportunityListView';
-import { PanelLeftClose, PanelLeftOpen, LayoutGrid, Rows3 } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, LayoutGrid, Rows3, Users, UserCheck } from 'lucide-react';
 import * as api from '@/lib/api';
 import type { Interview, Evidence, Opportunity, Solution, Outcome } from '@prisma/client';
 import { PanelState } from '@/components/SidePanel';
 import LandingPage from './landing-page'; // Import the new landing page
 import { SignOut } from '@/components/auth-components'; // Import the SignOut button
 import CommandPalette from '@/components/CommandPalette';
+import FeedbackButton from '@/components/FeedbackButton';
+import WelcomeModal from '@/components/WelcomeModal';
+import TemplateGallery from '@/components/TemplateGallery';
+import GuidedTutorial from '@/components/GuidedTutorial';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { Template } from '@/lib/templates';
+import { useStore } from '@/lib/store';
 
 type ViewMode = 'canvas' | 'list';
 type EvidenceType = 'VERBATIM' | 'PAIN_POINT' | 'DESIRE' | 'INSIGHT';
@@ -32,7 +38,15 @@ export default function Home() {
   const [focusedOutcome, setFocusedOutcome] = useState<Outcome | null>(null);
   const [panelState, setPanelState] = useState<PanelState>({ isOpen: false });
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
+  const [isTemplateGalleryOpen, setIsTemplateGalleryOpen] = useState(false);
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
+  const [isTutorialActive, setIsTutorialActive] = useState(false);
+  const [currentTutorialStep, setCurrentTutorialStep] = useState<string | null>(null);
   const { data: session, status } = useSession();
+  const instantiateTemplate = useStore((state) => state.instantiateTemplate);
+  const nodes = useStore((state) => state.nodes);
 
   const fetchData = useCallback(async (idToFocus?: string) => {
     try {
@@ -51,10 +65,30 @@ export default function Home() {
     fetchData();
   }, [fetchData]);
 
+  // Check if user is first-time user and show welcome modal
+  useEffect(() => {
+    if (session && status === 'authenticated') {
+      // Simple check: if user has no nodes, they're probably new
+      // In a real app, you might want to track this in user preferences
+      const hasVisitedBefore = localStorage.getItem('strata_has_visited');
+      if (!hasVisitedBefore && nodes.length === 0) {
+        setIsFirstTimeUser(true);
+        setIsWelcomeModalOpen(true);
+        localStorage.setItem('strata_has_visited', 'true');
+      }
+    }
+  }, [session, status, nodes.length]);
+
   // Command palette hotkey
   useHotkeys('mod+k', (e) => {
     e.preventDefault();
     setIsCommandPaletteOpen(true);
+  }, { enableOnFormTags: true });
+
+  // Feedback hotkey
+  useHotkeys('mod+shift+f', (e) => {
+    e.preventDefault();
+    setIsFeedbackOpen(true);
   }, { enableOnFormTags: true });
 
   const handleFocusNode = (nodeId: string) => {
@@ -86,6 +120,18 @@ export default function Home() {
           setIsCommandPaletteOpen(false);
           return;
         }
+        if (isFeedbackOpen) {
+          setIsFeedbackOpen(false);
+          return;
+        }
+        if (isTemplateGalleryOpen) {
+          setIsTemplateGalleryOpen(false);
+          return;
+        }
+        if (isWelcomeModalOpen) {
+          setIsWelcomeModalOpen(false);
+          return;
+        }
         if (focusedOpportunity || focusedSolution || focusedOutcome || editingInterview) {
           handleCloseOpportunityEditor();
           handleCloseSolutionEditor();
@@ -106,7 +152,7 @@ export default function Home() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isHubOpen, panelState, focusedOpportunity, focusedSolution, focusedOutcome, editingInterview, isCommandPaletteOpen]);
+  }, [isHubOpen, panelState, focusedOpportunity, focusedSolution, focusedOutcome, editingInterview, isCommandPaletteOpen, isFeedbackOpen, isWelcomeModalOpen, isTemplateGalleryOpen]);
 
   const handleDeleteInterview = async (id: string) => {
     if (window.confirm("Are you sure you want to permanently delete this interview?")) {
@@ -135,6 +181,60 @@ export default function Home() {
     fetchData(interviewId);
   };
 
+  // Onboarding flow handlers
+  const handlePathSelect = (path: 'guided' | 'template' | 'explore') => {
+    switch (path) {
+      case 'guided':
+        setIsWelcomeModalOpen(false);
+        setIsTutorialActive(true);
+        break;
+      case 'template':
+        setIsTemplateGalleryOpen(true);
+        break;
+      case 'explore':
+        // Close modal and let user explore
+        setIsWelcomeModalOpen(false);
+        break;
+    }
+  };
+
+  const handleTemplateSelect = async (template: Template) => {
+    setIsTemplateGalleryOpen(false);
+    setIsWelcomeModalOpen(false);
+    await instantiateTemplate(template);
+  };
+
+  const handleBackToWelcome = () => {
+    setIsTemplateGalleryOpen(false);
+    setIsWelcomeModalOpen(true);
+  };
+
+  const handleRestartOnboarding = () => {
+    localStorage.removeItem('strata_has_visited');
+    setIsFirstTimeUser(true);
+    setIsWelcomeModalOpen(true);
+  };
+
+  const handleTutorialComplete = () => {
+    setIsTutorialActive(false);
+    setCurrentTutorialStep(null);
+  };
+
+  const handleTutorialExit = () => {
+    setIsTutorialActive(false);
+    setCurrentTutorialStep(null);
+  };
+
+  // Detect when hub is opened during tutorial
+  useEffect(() => {
+    if (currentTutorialStep === 'research-hub-intro' && isHubOpen) {
+      // Hub was opened, mark this step as completed and advance
+      setTimeout(() => {
+        // This will be handled by the tutorial component
+      }, 500);
+    }
+  }, [currentTutorialStep, isHubOpen]);
+
     // Show a loading state while session is being determined
     if (status === 'loading') {
       return <div className="flex items-center justify-center h-screen">Loading...</div>;
@@ -150,8 +250,16 @@ export default function Home() {
       <header className="flex-shrink-0 bg-[var(--background)] border-b border-[var(--border)] z-20">
         <div className="p-2 flex items-center justify-between">
             <div className="flex items-center space-x-2">
-                <button onClick={() => setIsHubOpen(!isHubOpen)} className="p-2 rounded-md hover:bg-gray-100 text-gray-500" title={isHubOpen ? "Close Research Hub" : "Open Research Hub"}>
-                    {isHubOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
+                <button 
+                  onClick={() => setIsHubOpen(!isHubOpen)} 
+                  className={`p-2 rounded-md transition-colors ${
+                    isHubOpen 
+                      ? "bg-blue-100 text-blue-600 hover:bg-blue-200" 
+                      : "text-gray-600 hover:bg-gray-100 hover:text-blue-600"
+                  }`}
+                  title={isHubOpen ? "Close Research Hub" : "Open Research Hub"}
+                >
+                    {isHubOpen ? <UserCheck size={20} /> : <Users size={20} />}
                 </button>
                 <h1 className="text-lg font-semibold text-gray-800">Strata</h1>
             </div>
@@ -190,6 +298,8 @@ export default function Home() {
                   onFocusNode={handleFocusNode}
                   panelState={panelState}
                   setPanelState={setPanelState}
+                  onOpenTemplates={() => setIsTemplateGalleryOpen(true)}
+                  onStartTutorial={() => setIsWelcomeModalOpen(true)}
                 />
                 : <OpportunityListView onFocusNode={handleFocusNode} viewMode={viewMode} />
               }
@@ -218,9 +328,40 @@ export default function Home() {
         onNewInterview={handleNewInterview}
         onToggleHub={() => setIsHubOpen(!isHubOpen)}
         onToggleViewMode={() => setViewMode(viewMode === 'canvas' ? 'list' : 'canvas')}
+        onOpenFeedback={() => setIsFeedbackOpen(true)}
         isHubOpen={isHubOpen}
         viewMode={viewMode}
         onFocusNode={handleFocusNode}
+        onOpenWelcome={handleRestartOnboarding}
+        onOpenTemplates={() => setIsTemplateGalleryOpen(true)}
+      />
+      <FeedbackButton 
+        isOpen={isFeedbackOpen}
+        onOpenChange={setIsFeedbackOpen}
+      />
+      
+      {/* Onboarding Modals */}
+      <WelcomeModal
+        isOpen={isWelcomeModalOpen}
+        onClose={() => setIsWelcomeModalOpen(false)}
+        onPathSelect={handlePathSelect}
+      />
+      
+      <TemplateGallery
+        isOpen={isTemplateGalleryOpen}
+        onClose={() => setIsTemplateGalleryOpen(false)}
+        onTemplateSelect={handleTemplateSelect}
+        onBack={handleBackToWelcome}
+      />
+      
+      <GuidedTutorial
+        isActive={isTutorialActive}
+        onComplete={handleTutorialComplete}
+        onExit={handleTutorialExit}
+        onStepChange={setCurrentTutorialStep}
+        isHubOpen={isHubOpen}
+        interviews={interviews}
+        isPanelOpen={panelState.isOpen}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Search, Target, Lightbulb, BookText, FlaskConical, Plus, LayoutGrid, Rows3, PanelLeftOpen, PanelLeftClose, Users } from 'lucide-react';
+import { Search, Target, Lightbulb, BookText, FlaskConical, Plus, LayoutGrid, Rows3, PanelLeftOpen, PanelLeftClose, Users, MessageCircle } from 'lucide-react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import * as api from '@/lib/api';
 import { useStore } from '@/lib/store';
@@ -41,9 +41,12 @@ interface CommandPaletteProps {
   onNewInterview: () => void;
   onToggleHub: () => void;
   onToggleViewMode: () => void;
+  onOpenFeedback: () => void;
   isHubOpen: boolean;
   viewMode: 'canvas' | 'list';
   onFocusNode: (nodeId: string) => void;
+  onOpenWelcome?: () => void;
+  onOpenTemplates?: () => void;
 }
 
 export default function CommandPalette({
@@ -56,9 +59,12 @@ export default function CommandPalette({
   onNewInterview,
   onToggleHub,
   onToggleViewMode,
+  onOpenFeedback,
   isHubOpen,
   viewMode,
   onFocusNode,
+  onOpenWelcome,
+  onOpenTemplates,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -179,7 +185,43 @@ export default function CommandPalette({
         onClose();
       },
     },
-  ], [addNode, nodes, isHubOpen, viewMode, onClose, onNewInterview, onToggleHub, onToggleViewMode]);
+    {
+      id: 'send-feedback',
+      title: 'Send Feedback',
+      description: 'Share feedback, report bugs, or request features',
+      icon: <MessageCircle size={16} />,
+      type: 'action',
+      category: 'Help',
+      action: () => {
+        onOpenFeedback();
+        onClose();
+      },
+    },
+    ...(onOpenWelcome ? [{
+      id: 'open-welcome',
+      title: 'Get Started Guide',
+      description: 'Restart onboarding and choose your path',
+      icon: <BookText size={16} />,
+      type: 'action' as const,
+      category: 'Help',
+      action: () => {
+        onOpenWelcome();
+        onClose();
+      },
+    }] : []),
+    ...(onOpenTemplates ? [{
+      id: 'open-templates',
+      title: 'Browse Templates',
+      description: 'Start with pre-built opportunity solution trees',
+      icon: <FlaskConical size={16} />,
+      type: 'action' as const,
+      category: 'Help',
+      action: () => {
+        onOpenTemplates();
+        onClose();
+      },
+    }] : []),
+  ], [addNode, nodes, isHubOpen, viewMode, onClose, onNewInterview, onToggleHub, onToggleViewMode, onOpenFeedback, onOpenWelcome, onOpenTemplates]);
 
   // Generate search commands from results
   const searchCommands: SearchCommand[] = useMemo(() => {
