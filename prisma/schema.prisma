@@ -26,6 +26,7 @@ model User {
   experiments   Experiment[]
   interviews    Interview[]
   evidences     Evidence[]
+  feedbacks     Feedback[]
 }
 
 model Account {
@@ -219,4 +220,43 @@ enum AssumptionType {
   FEASIBILITY
   USABILITY
   ETHICAL
+}
+
+model Feedback {
+  id          String       @id @default(cuid())
+  type        FeedbackType
+  subject     String?
+  message     String
+  userAgent   String?
+  url         String?
+  createdAt   DateTime     @default(now())
+  status      FeedbackStatus @default(OPEN)
+  priority    FeedbackPriority @default(NORMAL)
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum FeedbackType {
+  BUG_REPORT
+  FEATURE_REQUEST
+  IMPROVEMENT
+  QUESTION
+  OTHER
+}
+
+enum FeedbackStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum FeedbackPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
 }
