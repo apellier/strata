@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { debounce } from 'lodash';
 
 export const PropertyRow = ({ label, children }: { label: string, children: React.ReactNode }) => (
@@ -17,7 +17,7 @@ export const DebouncedInput = ({ value, onChange, type = 'text', placeholder = '
         setLocalValue(value);
     }, [value]);
 
-    const debouncedOnChange = useCallback(debounce(onChange, 800), [onChange]);
+    const debouncedOnChange = useMemo(() => debounce(onChange, 800), [onChange]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const newValue = e.target.value;

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Interview, Evidence } from '@prisma/client';
 import { X } from 'lucide-react';
 import { debounce } from 'lodash';
@@ -53,7 +53,7 @@ const InterviewWorkspace = ({
     }, [interview.id, interview.notes]);
 
     // Debounce the update function to prevent excessive API calls while typing
-    const debouncedUpdate = useCallback(debounce(onUpdate, 1200), [onUpdate]);
+    const debouncedUpdate = useMemo(() => debounce(onUpdate, 1200), [onUpdate]);
 
     const handleIntervieweeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newName = e.target.value;

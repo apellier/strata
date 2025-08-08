@@ -32,7 +32,7 @@ export default function RiceScoreCalculator({ nodeData, onUpdate }: RiceScoreCal
     return Math.round(score * 10) / 10; // Round to one decimal place
   }, [reach, impact, confidence, effort]);
 
-  const debouncedUpdate = useCallback(debounce((updates) => {
+  const debouncedUpdate = useMemo(() => debounce((updates) => {
     onUpdate(updates);
   }, 1200), [onUpdate]);
 

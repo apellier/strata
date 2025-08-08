@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, ArrowRight, ArrowLeft, CheckCircle, Target, Lightbulb, FlaskConical, Users, BookOpen, Eye, Zap } from 'lucide-react';
 import { useStore } from '@/lib/store';
 
@@ -132,7 +132,7 @@ const tutorialSteps: TutorialStep[] = [
     instruction: 'Click on one of your opportunity nodes to open its details panel, then add multiple solution ideas in the "Solution Candidates" section.',
     targetElement: '[data-node-type="opportunity"]',
     position: 'top',
-    action: 'create-solution-ideas',
+    action: 'create-solution',
     triggerNext: 'manual',
     concept: {
       title: 'Solution Ideation',
@@ -147,7 +147,7 @@ const tutorialSteps: TutorialStep[] = [
     content: 'Excellent ideation! Now select your most promising solution idea and promote it to the canvas. In real discovery, you\'d run experiments to validate ideas before promoting them.',
     instruction: 'In the Solution Candidates section, click the promote button (↑) on one of your ideas to add it to the canvas as a solution.',
     triggerNext: 'action',
-    action: 'promote-solution',
+    action: 'create-solution',
     completedWhen: () => true,
     concept: {
       title: 'Solution Selection',
@@ -241,9 +241,6 @@ export default function GuidedTutorial({ isActive, onComplete, onExit, onStepCha
       case 'create-solution':
         completed = nodes.filter(n => n.data.type === 'solution').length > 0;
         break;
-      case 'promote-solution':
-        completed = nodes.filter(n => n.data.type === 'solution').length > 0;
-        break;
       case 'open-hub':
         completed = isHubOpen === true;
         break;
@@ -263,14 +260,14 @@ export default function GuidedTutorial({ isActive, onComplete, onExit, onStepCha
     }
   }, [nodes, currentStep, completedSteps, isHubOpen, interviews]);
 
-  const nextStep = () => {
+  const nextStep = useCallback(() => {
     if (currentStepIndex < tutorialSteps.length - 1) {
       setCurrentStepIndex(prev => prev + 1);
       setIsHighlighting(false);
     } else {
       completeTutorial();
     }
-  };
+  }, [currentStepIndex]);
 
   const prevStep = () => {
     if (currentStepIndex > 0) {
@@ -279,10 +276,10 @@ export default function GuidedTutorial({ isActive, onComplete, onExit, onStepCha
     }
   };
 
-  const completeTutorial = () => {
+  const completeTutorial = useCallback(() => {
     setIsHighlighting(false);
     onComplete();
-  };
+  }, [onComplete]);
 
   // Determine tutorial card position based on panel states and current step
   const getTutorialCardPosition = () => {

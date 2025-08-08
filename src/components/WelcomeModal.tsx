@@ -176,7 +176,7 @@ export default function WelcomeModal({ isOpen, onClose, onPathSelect }: WelcomeM
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-medium text-blue-900 mb-1">
-                    Ready to start with "{paths.find(p => p.id === selectedPath)?.title}"?
+                    Ready to start with &quot;{paths.find(p => p.id === selectedPath)?.title}&quot;?
                   </h4>
                   <p className="text-sm text-blue-700">
                     {paths.find(p => p.id === selectedPath)?.timeEstimate} to get started
